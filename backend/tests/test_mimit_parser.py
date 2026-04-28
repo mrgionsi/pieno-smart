@@ -48,6 +48,24 @@ def test_parse_station_csv_without_link_column_still_works() -> None:
     assert result.rows[0].ministerial_station_id == "12345"
 
 
+def test_parse_station_csv_with_live_12_column_row_still_works() -> None:
+    content = """Estrazione del 2026-04-27
+idImpianto|Gestore|Bandiera|Tipo Impianto|Nome Impianto|Indirizzo|Comune|Provincia|Latitudine|Longitudine
+24344|START SERVICE - FOMBIO | BENZINA.IT|Pompe Bianche|Stradale|START SERVICE - FOMBIO | gestori.prezzibenzina.it|VIA BOCCASERIO 1 26861|FOMBIO|LO|45.14897884834186|9.697519249026513
+"""
+
+    result = parse_station_csv(content)
+
+    assert len(result.rows) == 1
+    assert result.rows[0].ministerial_station_id == "24344"
+    assert result.rows[0].manager == "START SERVICE - FOMBIO"
+    assert result.rows[0].brand == "Pompe Bianche"
+    assert result.rows[0].station_type == "Stradale"
+    assert result.rows[0].name == "START SERVICE - FOMBIO"
+    assert result.rows[0].address == "VIA BOCCASERIO 1 26861"
+    assert result.rows[0].comune == "FOMBIO"
+
+
 def test_parse_price_csv_with_header_row_and_normalization() -> None:
     content = """Estrazione del 2026-04-27
 idimpianto|descCarburante|prezzo|isSelf|dtComu

@@ -35,6 +35,21 @@ STATION_HEADERS = [
     "Longitudine",
 ]
 
+STATION_HEADERS_WITH_EXTRA = [
+    "idimpianto",
+    "Gestore",
+    "ExtraMiddleField",
+    "Bandiera",
+    "Tipo Impianto",
+    "Nome Impianto",
+    "Link",
+    "Indirizzo",
+    "Comune",
+    "Provincia",
+    "Latitudine",
+    "Longitudine",
+]
+
 STATION_HEADERS_LEGACY = [
     "idimpianto",
     "Gestore",
@@ -146,11 +161,18 @@ def _map_station_rows(rows: list[list[str]]) -> list[dict[str, str]]:
         return []
 
     working_rows = rows
-    if _is_header_row(rows[0], STATION_HEADERS) or _is_header_row(rows[0], STATION_HEADERS_LEGACY):
+    if (
+        _is_header_row(rows[0], STATION_HEADERS)
+        or _is_header_row(rows[0], STATION_HEADERS_WITH_EXTRA)
+        or _is_header_row(rows[0], STATION_HEADERS_LEGACY)
+    ):
         working_rows = rows[1:]
 
     mapped_rows: list[dict[str, str]] = []
     for row in working_rows:
+        if len(row) == len(STATION_HEADERS_WITH_EXTRA):
+            mapped_rows.append(dict(zip(STATION_HEADERS_WITH_EXTRA, row, strict=True)))
+            continue
         if len(row) == len(STATION_HEADERS):
             mapped_rows.append(dict(zip(STATION_HEADERS, row, strict=True)))
             continue
@@ -160,8 +182,8 @@ def _map_station_rows(rows: list[list[str]]) -> list[dict[str, str]]:
             mapped_rows.append(legacy_row)
             continue
         raise ValueError(
-            f"Unexpected column count. Expected {len(STATION_HEADERS)} or "
-            f"{len(STATION_HEADERS_LEGACY)}, got {len(row)}: {row}"
+            f"Unexpected column count. Expected {len(STATION_HEADERS_WITH_EXTRA)}, "
+            f"{len(STATION_HEADERS)} or {len(STATION_HEADERS_LEGACY)}, got {len(row)}: {row}"
         )
     return mapped_rows
 
