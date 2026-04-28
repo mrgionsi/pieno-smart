@@ -50,6 +50,7 @@ class MimitDatasetClient:
 
     def download_current_snapshot(self) -> MimitDownloadPayload:
         dataset_page_url = self.settings.mimit_dataset_page_url
+        print(f"[MIMIT] Fetching dataset page: {dataset_page_url}", flush=True)
         dataset_page_response = self._get_with_retry(dataset_page_url)
         dataset_page_response.raise_for_status()
 
@@ -59,9 +60,11 @@ class MimitDatasetClient:
         prices_url = parser.require_url(PRICE_LINK_TEXT, dataset_page_url)
         stations_url = parser.require_url(STATION_LINK_TEXT, dataset_page_url)
 
+        print(f"[MIMIT] Fetching station CSV: {stations_url}", flush=True)
         stations_response = self._get_with_retry(stations_url)
         stations_response.raise_for_status()
 
+        print(f"[MIMIT] Fetching price CSV: {prices_url}", flush=True)
         prices_response = self._get_with_retry(prices_url)
         prices_response.raise_for_status()
 
@@ -78,6 +81,11 @@ class MimitDatasetClient:
 
         for attempt in range(1, self.settings.mimit_http_max_retries + 1):
             try:
+                if attempt > 1:
+                    print(
+                        f"[MIMIT] Retry {attempt}/{self.settings.mimit_http_max_retries}: {url}",
+                        flush=True,
+                    )
                 return self.http_client.get(url)
             except (httpx.RemoteProtocolError, httpx.ReadTimeout, httpx.ConnectError) as exc:
                 last_error = exc
