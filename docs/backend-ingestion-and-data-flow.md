@@ -278,10 +278,20 @@ Current service/helper tests cover:
 - highway station flag derivation
 - source timestamp conversion
 
+There is also a DB-backed integration test that:
+
+- loads representative fixture files
+- runs ingestion against PostgreSQL
+- verifies station inserts
+- verifies current price upserts
+- verifies `price_changes` creation across two price snapshots
+
 See:
 
 - [backend/tests/test_mimit_parser.py](/Users/gionsi/Documents/personal_projects/pieno_smart/backend/tests/test_mimit_parser.py)
 - [backend/tests/test_mimit_ingestion_service.py](/Users/gionsi/Documents/personal_projects/pieno_smart/backend/tests/test_mimit_ingestion_service.py)
+- [backend/tests/test_mimit_dataset_client.py](/Users/gionsi/Documents/personal_projects/pieno_smart/backend/tests/test_mimit_dataset_client.py)
+- [backend/tests/test_mimit_ingestion_integration.py](/Users/gionsi/Documents/personal_projects/pieno_smart/backend/tests/test_mimit_ingestion_integration.py)
 
 ## Current Gaps And Next Steps
 
@@ -292,6 +302,11 @@ The ingestion stack is now at the point where parsing and first persistence logi
 - improve anomaly handling for stations without coordinates
 - persist richer station metadata if product needs it
 - expose ingestion execution through a scheduler-ready command path
+
+Integration-test note:
+
+- the DB-backed ingestion test uses the active `DATABASE_URL`
+- if the configured PostgreSQL database is not reachable, the test is skipped automatically
 
 ## Practical Mental Model
 

@@ -170,6 +170,24 @@ Run tests:
 pytest
 ```
 
+Run only ingestion-related tests:
+
+```bash
+pytest tests/test_mimit_parser.py tests/test_mimit_ingestion_service.py tests/test_mimit_dataset_client.py
+```
+
+Run the DB-backed ingestion integration test:
+
+```bash
+pytest tests/test_mimit_ingestion_integration.py
+```
+
+Note:
+
+- the integration test uses the active `DATABASE_URL`
+- it is skipped automatically if PostgreSQL is not reachable
+- for local Docker-based execution, make sure `.env` points to `127.0.0.1:5432`
+
 Run Ruff:
 
 ```bash
