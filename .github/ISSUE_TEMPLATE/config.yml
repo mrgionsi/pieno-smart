@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: PienoSmart Documentation
+    url: https://github.com/mrgionsi/pieno-smart
+    about: Review the repository documentation before opening a broad architectural issue.

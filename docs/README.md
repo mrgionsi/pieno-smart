@@ -9,7 +9,7 @@ This folder contains the agreed MVP documentation set for PienoSmart.
 - API schema/validation: Pydantic v2
 - ORM/data access: SQLAlchemy 2.0
 - Migrations: Alembic
-- Database: PostgreSQL 16 + PostGIS
+- Database: PostgreSQL 18 + PostGIS 3.6
 - HTTP client for MIMIT and provider calls: `httpx`
 - Background execution model: external scheduler calling idempotent CLI/app jobs
 - Test framework: `pytest`
