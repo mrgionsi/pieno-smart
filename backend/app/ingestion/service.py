@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime, time
 from decimal import Decimal
+from time import perf_counter
 import re
 from zoneinfo import ZoneInfo
 
@@ -15,6 +16,7 @@ from app.models.common import SyncStatus
 
 ROME_TZ = ZoneInfo("Europe/Rome")
 POSTAL_CODE_RE = re.compile(r"\b(\d{5})\b")
+PROGRESS_LOG_EVERY = 5_000
 
 
 @dataclass(slots=True)
@@ -89,17 +91,41 @@ class MimitIngestionService:
     ) -> dict[str, int]:
         station_lookup: dict[str, int] = {}
         source_updated_at = source_timestamp(station_data.extraction_date)
+        total_rows = len(station_data.rows)
+        phase_started_at = perf_counter()
 
-        for row in station_data.rows:
+        self._log(
+            "Station upsert phase started",
+            total_rows=total_rows,
+        )
+
+        for index, row in enumerate(station_data.rows, start=1):
             counters.station_rows_seen += 1
             station_id = self._upsert_station(row, source_updated_at)
             if station_id is None:
                 counters.station_rows_skipped += 1
-                continue
-            station_lookup[row.ministerial_station_id] = station_id
-            counters.station_rows_upserted += 1
+            else:
+                station_lookup[row.ministerial_station_id] = station_id
+                counters.station_rows_upserted += 1
+
+            if index % PROGRESS_LOG_EVERY == 0 or index == total_rows:
+                self._log(
+                    "Station upsert progress",
+                    processed=index,
+                    total_rows=total_rows,
+                    upserted=counters.station_rows_upserted,
+                    skipped=counters.station_rows_skipped,
+                    elapsed_seconds=f"{perf_counter() - phase_started_at:.2f}",
+                )
 
         self.db.flush()
+        self._log(
+            "Station upsert phase completed",
+            total_rows=total_rows,
+            upserted=counters.station_rows_upserted,
+            skipped=counters.station_rows_skipped,
+            elapsed_seconds=f"{perf_counter() - phase_started_at:.2f}",
+        )
         return station_lookup
 
     def _ingest_prices(
@@ -109,22 +135,48 @@ class MimitIngestionService:
         counters: IngestionCounters,
     ) -> None:
         source_updated_at = source_timestamp(price_data.extraction_date)
+        total_rows = len(price_data.rows)
+        phase_started_at = perf_counter()
 
-        for row in price_data.rows:
+        self._log(
+            "Price upsert phase started",
+            total_rows=total_rows,
+        )
+
+        for index, row in enumerate(price_data.rows, start=1):
             counters.price_rows_seen += 1
             station_id = station_lookup.get(row.ministerial_station_id)
             if station_id is None:
                 counters.price_rows_skipped += 1
-                continue
+            else:
+                change_written = self._upsert_current_price(
+                    station_id=station_id,
+                    row=row,
+                    source_updated_at=source_updated_at,
+                )
+                counters.price_rows_upserted += 1
+                if change_written:
+                    counters.price_change_rows_inserted += 1
 
-            change_written = self._upsert_current_price(
-                station_id=station_id,
-                row=row,
-                source_updated_at=source_updated_at,
-            )
-            counters.price_rows_upserted += 1
-            if change_written:
-                counters.price_change_rows_inserted += 1
+            if index % PROGRESS_LOG_EVERY == 0 or index == total_rows:
+                self._log(
+                    "Price upsert progress",
+                    processed=index,
+                    total_rows=total_rows,
+                    upserted=counters.price_rows_upserted,
+                    skipped=counters.price_rows_skipped,
+                    price_changes=counters.price_change_rows_inserted,
+                    elapsed_seconds=f"{perf_counter() - phase_started_at:.2f}",
+                )
+
+        self._log(
+            "Price upsert phase completed",
+            total_rows=total_rows,
+            upserted=counters.price_rows_upserted,
+            skipped=counters.price_rows_skipped,
+            price_changes=counters.price_change_rows_inserted,
+            elapsed_seconds=f"{perf_counter() - phase_started_at:.2f}",
+        )
 
     def _upsert_station(self, row: ParsedStationRow, source_updated_at: datetime) -> int | None:
         location_wkt = station_location_wkt(row)
@@ -263,6 +315,13 @@ class MimitIngestionService:
     def _load_station_lookup(self) -> dict[str, int]:
         rows = self.db.execute(select(Station.ministerial_station_id, Station.id)).all()
         return {ministerial_station_id: int(station_id) for ministerial_station_id, station_id in rows}
+
+    def _log(self, message: str, **fields: object) -> None:
+        if fields:
+            suffix = " ".join(f"{key}={value}" for key, value in fields.items())
+            print(f"[INGEST] {message} {suffix}", flush=True)
+            return
+        print(f"[INGEST] {message}", flush=True)
 
 
 def source_timestamp(extraction_date: date) -> datetime:
