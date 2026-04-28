@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime, time
 from decimal import Decimal
+from itertools import islice
 from time import perf_counter
 import re
 from zoneinfo import ZoneInfo
@@ -12,12 +13,19 @@ from sqlalchemy.orm import Session
 
 from app.ingestion.models import ParsedPriceRow, ParsedStationRow, PriceFileParseResult, StationFileParseResult
 from app.models import CurrentPrice, PriceChange, Station, SyncRun
-from app.models.common import SyncStatus
+from app.models.common import FuelType, ServiceMode, SyncStatus
 
 ROME_TZ = ZoneInfo("Europe/Rome")
 POSTAL_CODE_RE = re.compile(r"\b(\d{5})\b")
 EARLY_PROGRESS_MARKERS = {1, 100, 500, 1_000}
 PROGRESS_LOG_EVERY = 5_000
+BATCH_SIZE = 1_000
+
+
+@dataclass(slots=True)
+class CurrentPriceState:
+    id: int
+    price: Decimal
 
 
 @dataclass(slots=True)
@@ -61,6 +69,7 @@ class MimitIngestionService:
                     station_lookup = self._load_station_lookup()
                 self._ingest_prices(price_data, station_lookup, counters)
 
+            self.db.expire_all()
             sync_run.status = SyncStatus.COMPLETED
             sync_run.completed_at = datetime.now(ROME_TZ)
             sync_run.station_records_seen = counters.station_rows_seen
@@ -101,17 +110,14 @@ class MimitIngestionService:
             existing_stations=len(station_lookup),
         )
 
+        station_upsert_rows: list[dict[str, object]] = []
         for index, row in enumerate(station_data.rows, start=1):
             counters.station_rows_seen += 1
-            station_id = self._upsert_station(
-                row,
-                source_updated_at,
-                existing_station_id=station_lookup.get(row.ministerial_station_id),
-            )
-            if station_id is None:
+            upsert_payload = self._build_station_upsert_payload(row, source_updated_at)
+            if upsert_payload is None:
                 counters.station_rows_skipped += 1
             else:
-                station_lookup[row.ministerial_station_id] = station_id
+                station_upsert_rows.append(upsert_payload)
                 counters.station_rows_upserted += 1
 
             if index in EARLY_PROGRESS_MARKERS or index % PROGRESS_LOG_EVERY == 0 or index == total_rows:
@@ -124,7 +130,9 @@ class MimitIngestionService:
                     elapsed_seconds=f"{perf_counter() - phase_started_at:.2f}",
                 )
 
+        self._execute_station_upserts(station_upsert_rows)
         self.db.flush()
+        station_lookup = self._load_station_lookup()
         self._log(
             "Station upsert phase completed",
             total_rows=total_rows,
@@ -143,11 +151,17 @@ class MimitIngestionService:
         source_updated_at = source_timestamp(price_data.extraction_date)
         total_rows = len(price_data.rows)
         phase_started_at = perf_counter()
+        current_price_lookup = self._load_current_price_lookup()
 
         self._log(
             "Price upsert phase started",
             total_rows=total_rows,
+            existing_prices=len(current_price_lookup),
         )
+
+        current_price_inserts: list[dict[str, object]] = []
+        current_price_updates: list[dict[str, object]] = []
+        price_change_inserts: list[dict[str, object]] = []
 
         for index, row in enumerate(price_data.rows, start=1):
             counters.price_rows_seen += 1
@@ -155,14 +169,47 @@ class MimitIngestionService:
             if station_id is None:
                 counters.price_rows_skipped += 1
             else:
-                change_written = self._upsert_current_price(
-                    station_id=station_id,
-                    row=row,
-                    source_updated_at=source_updated_at,
+                lookup_key = (station_id, row.fuel_type, row.service_mode)
+                existing = current_price_lookup.get(lookup_key)
+                if existing is None:
+                    current_price_inserts.append(
+                        {
+                            "station_id": station_id,
+                            "fuel_type": row.fuel_type.value,
+                            "service_mode": row.service_mode.value,
+                            "price": row.price,
+                            "price_effective_at": row.communicated_at,
+                            "source_updated_at": source_updated_at,
+                        }
+                    )
+                else:
+                    current_price_updates.append(
+                        {
+                            "id": existing.id,
+                            "price": row.price,
+                            "price_effective_at": row.communicated_at,
+                            "source_updated_at": source_updated_at,
+                        }
+                    )
+                    if existing.price != row.price:
+                        price_change_inserts.append(
+                            {
+                                "station_id": station_id,
+                                "fuel_type": row.fuel_type.value,
+                                "service_mode": row.service_mode.value,
+                                "old_price": existing.price,
+                                "new_price": row.price,
+                                "changed_at": row.communicated_at or source_updated_at,
+                                "source_updated_at": source_updated_at,
+                            }
+                        )
+                        counters.price_change_rows_inserted += 1
+
+                current_price_lookup[lookup_key] = CurrentPriceState(
+                    id=existing.id if existing is not None else -1,
+                    price=row.price,
                 )
                 counters.price_rows_upserted += 1
-                if change_written:
-                    counters.price_change_rows_inserted += 1
 
             if index % PROGRESS_LOG_EVERY == 0 or index == total_rows:
                 self._log(
@@ -175,6 +222,12 @@ class MimitIngestionService:
                     elapsed_seconds=f"{perf_counter() - phase_started_at:.2f}",
                 )
 
+        self._execute_current_price_inserts(current_price_inserts)
+        if current_price_updates:
+            self._execute_current_price_updates(current_price_updates)
+        if price_change_inserts:
+            self._execute_price_change_inserts(price_change_inserts)
+
         self._log(
             "Price upsert phase completed",
             total_rows=total_rows,
@@ -184,18 +237,16 @@ class MimitIngestionService:
             elapsed_seconds=f"{perf_counter() - phase_started_at:.2f}",
         )
 
-    def _upsert_station(
+    def _build_station_upsert_payload(
         self,
         row: ParsedStationRow,
         source_updated_at: datetime,
-        *,
-        existing_station_id: int | None,
-    ) -> int | None:
+    ) -> dict[str, object] | None:
         location_wkt = station_location_wkt(row)
         if location_wkt is None:
             return None
 
-        params = {
+        return {
             "ministerial_station_id": row.ministerial_station_id,
             "name": row.name,
             "brand": row.brand,
@@ -210,120 +261,145 @@ class MimitIngestionService:
             "source_updated_at": source_updated_at,
         }
 
-        if existing_station_id is None:
-            inserted_id = self.db.execute(
-                text(
-                    """
-                    INSERT INTO stations (
-                        ministerial_station_id,
-                        name,
-                        brand,
-                        address,
-                        comune,
-                        provincia,
-                        postal_code,
-                        is_highway_station,
-                        is_active,
-                        services_json,
-                        location,
-                        source_updated_at
-                    ) VALUES (
-                        :ministerial_station_id,
-                        :name,
-                        :brand,
-                        :address,
-                        :comune,
-                        :provincia,
-                        :postal_code,
-                        :is_highway_station,
-                        :is_active,
-                        CAST(:services_json AS jsonb),
-                        ST_GeogFromText(:location_wkt),
-                        :source_updated_at
-                    )
-                    RETURNING id
-                    """
-                ),
-                params,
-            ).scalar_one()
-            return int(inserted_id)
+    def _execute_station_upserts(self, rows: list[dict[str, object]]) -> None:
+        if not rows:
+            return
 
-        self.db.execute(
-            text(
-                """
-                UPDATE stations
-                SET
-                    name = :name,
-                    brand = :brand,
-                    address = :address,
-                    comune = :comune,
-                    provincia = :provincia,
-                    postal_code = :postal_code,
-                    is_highway_station = :is_highway_station,
-                    is_active = :is_active,
-                    services_json = CAST(:services_json AS jsonb),
-                    location = ST_GeogFromText(:location_wkt),
-                    source_updated_at = :source_updated_at,
-                    updated_at = now()
-                WHERE id = :station_id
-                """
-            ),
-            {**params, "station_id": existing_station_id},
+        statement = text(
+            """
+            INSERT INTO stations (
+                ministerial_station_id,
+                name,
+                brand,
+                address,
+                comune,
+                provincia,
+                postal_code,
+                is_highway_station,
+                is_active,
+                services_json,
+                location,
+                source_updated_at
+            ) VALUES (
+                :ministerial_station_id,
+                :name,
+                :brand,
+                :address,
+                :comune,
+                :provincia,
+                :postal_code,
+                :is_highway_station,
+                :is_active,
+                CAST(:services_json AS jsonb),
+                ST_GeogFromText(:location_wkt),
+                :source_updated_at
+            )
+            ON CONFLICT (ministerial_station_id) DO UPDATE
+            SET
+                name = EXCLUDED.name,
+                brand = EXCLUDED.brand,
+                address = EXCLUDED.address,
+                comune = EXCLUDED.comune,
+                provincia = EXCLUDED.provincia,
+                postal_code = EXCLUDED.postal_code,
+                is_highway_station = EXCLUDED.is_highway_station,
+                is_active = EXCLUDED.is_active,
+                services_json = EXCLUDED.services_json,
+                location = EXCLUDED.location,
+                source_updated_at = EXCLUDED.source_updated_at,
+                updated_at = now()
+            """
         )
-        return int(existing_station_id)
+        for batch in chunked(rows, BATCH_SIZE):
+            self.db.execute(statement, batch)
 
-    def _upsert_current_price(
-        self,
-        *,
-        station_id: int,
-        row: ParsedPriceRow,
-        source_updated_at: datetime,
-    ) -> bool:
-        existing = self.db.scalar(
-            select(CurrentPrice).where(
-                CurrentPrice.station_id == station_id,
-                CurrentPrice.fuel_type == row.fuel_type,
-                CurrentPrice.service_mode == row.service_mode,
+    def _execute_current_price_inserts(self, rows: list[dict[str, object]]) -> None:
+        if not rows:
+            return
+        statement = text(
+            """
+            INSERT INTO current_prices (
+                station_id,
+                fuel_type,
+                service_mode,
+                price,
+                price_effective_at,
+                source_updated_at
+            ) VALUES (
+                :station_id,
+                CAST(:fuel_type AS fuel_type),
+                CAST(:service_mode AS service_mode),
+                :price,
+                :price_effective_at,
+                :source_updated_at
             )
+            """
         )
+        for batch in chunked(rows, BATCH_SIZE):
+            self.db.execute(statement, batch)
 
-        if existing is None:
-            self.db.add(
-                CurrentPrice(
-                    station_id=station_id,
-                    fuel_type=row.fuel_type,
-                    service_mode=row.service_mode,
-                    price=row.price,
-                    price_effective_at=row.communicated_at,
-                    source_updated_at=source_updated_at,
-                )
+    def _execute_current_price_updates(self, rows: list[dict[str, object]]) -> None:
+        statement = text(
+            """
+            UPDATE current_prices
+            SET
+                price = :price,
+                price_effective_at = :price_effective_at,
+                source_updated_at = :source_updated_at,
+                updated_at = now()
+            WHERE id = :id
+            """
+        )
+        for batch in chunked(rows, BATCH_SIZE):
+            self.db.execute(statement, batch)
+
+    def _execute_price_change_inserts(self, rows: list[dict[str, object]]) -> None:
+        statement = text(
+            """
+            INSERT INTO price_changes (
+                station_id,
+                fuel_type,
+                service_mode,
+                old_price,
+                new_price,
+                changed_at,
+                source_updated_at
+            ) VALUES (
+                :station_id,
+                CAST(:fuel_type AS fuel_type),
+                CAST(:service_mode AS service_mode),
+                :old_price,
+                :new_price,
+                :changed_at,
+                :source_updated_at
             )
-            return False
-
-        if existing.price != row.price:
-            self.db.add(
-                PriceChange(
-                    station_id=station_id,
-                    fuel_type=row.fuel_type,
-                    service_mode=row.service_mode,
-                    old_price=existing.price,
-                    new_price=row.price,
-                    changed_at=row.communicated_at or source_updated_at,
-                    source_updated_at=source_updated_at,
-                )
-            )
-            existing.price = row.price
-            existing.price_effective_at = row.communicated_at
-            existing.source_updated_at = source_updated_at
-            return True
-
-        existing.price_effective_at = row.communicated_at
-        existing.source_updated_at = source_updated_at
-        return False
+            """
+        )
+        for batch in chunked(rows, BATCH_SIZE):
+            self.db.execute(statement, batch)
 
     def _load_station_lookup(self) -> dict[str, int]:
         rows = self.db.execute(select(Station.ministerial_station_id, Station.id)).all()
         return {ministerial_station_id: int(station_id) for ministerial_station_id, station_id in rows}
+
+    def _load_current_price_lookup(self) -> dict[tuple[int, FuelType, ServiceMode], CurrentPriceState]:
+        rows = self.db.execute(
+            select(
+                CurrentPrice.id,
+                CurrentPrice.station_id,
+                CurrentPrice.fuel_type,
+                CurrentPrice.service_mode,
+                CurrentPrice.price,
+            )
+        ).all()
+        return {
+            (
+                int(station_id),
+                fuel_type,
+                service_mode,
+            ): CurrentPriceState(id=int(current_price_id), price=price)
+            for current_price_id, station_id, fuel_type, service_mode, price in rows
+        }
 
     def _log(self, message: str, **fields: object) -> None:
         if fields:
@@ -357,3 +433,11 @@ def station_location_wkt(row: ParsedStationRow) -> str | None:
     if row.latitude is None or row.longitude is None:
         return None
     return f"SRID=4326;POINT({row.longitude} {row.latitude})"
+
+
+def chunked(items: list[dict[str, object]], size: int) -> list[list[dict[str, object]]]:
+    iterator = iter(items)
+    chunks: list[list[dict[str, object]]] = []
+    while batch := list(islice(iterator, size)):
+        chunks.append(batch)
+    return chunks
