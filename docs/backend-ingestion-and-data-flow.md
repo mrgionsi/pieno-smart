@@ -27,6 +27,11 @@ Current modules:
 - `app.alerts`
   - will contain alert evaluation logic
 
+Configuration note:
+
+- backend settings are loaded from `backend/.env` via an absolute path
+- this avoids accidental fallback to default database settings when commands are run from the repo root instead of the `backend/` folder
+
 ## Separation Of Concerns
 
 The backend intentionally separates three different concerns:
@@ -40,6 +45,7 @@ Current files:
 - [backend/app/ingestion/parser.py](/Users/gionsi/Documents/personal_projects/pieno_smart/backend/app/ingestion/parser.py)
 - [backend/app/ingestion/models.py](/Users/gionsi/Documents/personal_projects/pieno_smart/backend/app/ingestion/models.py)
 - [backend/app/ingestion/normalize.py](/Users/gionsi/Documents/personal_projects/pieno_smart/backend/app/ingestion/normalize.py)
+- [backend/app/ingestion/client.py](/Users/gionsi/Documents/personal_projects/pieno_smart/backend/app/ingestion/client.py)
 
 ### 2. Persistence
 
@@ -73,6 +79,25 @@ The two files relevant to MVP are:
 
 - `anagrafica_impianti_attivi.csv`
 - `prezzo_alle_8.csv`
+
+## Download Strategy
+
+The current implementation does not hardcode the CSV file URLs.
+
+Instead it:
+
+1. fetches the official MIMIT dataset page
+2. resolves the current links for:
+   - `Prezzo alle 8 di mattina`
+   - `Anagrafica degli impianti attivi`
+3. downloads those CSV files
+4. passes the file contents into the parser
+
+Current implementation:
+
+- [backend/app/ingestion/client.py](/Users/gionsi/Documents/personal_projects/pieno_smart/backend/app/ingestion/client.py)
+
+This is a practical MVP tradeoff because the public dataset page is the stable official entrypoint, while direct file URLs may change over time.
 
 ## Current Assumed File Format
 
@@ -228,6 +253,7 @@ python -m app.ingestion.run --stations-file /path/to/anagrafica_impianti_attivi.
 Optional:
 
 - `--source-name mimit.manual`
+- `--download-current`
 
 ## Database Objects Used By Ingestion
 
@@ -257,10 +283,20 @@ Current service/helper tests cover:
 - highway station flag derivation
 - source timestamp conversion
 
+There is also a DB-backed integration test that:
+
+- loads representative fixture files
+- runs ingestion against PostgreSQL
+- verifies station inserts
+- verifies current price upserts
+- verifies `price_changes` creation across two price snapshots
+
 See:
 
 - [backend/tests/test_mimit_parser.py](/Users/gionsi/Documents/personal_projects/pieno_smart/backend/tests/test_mimit_parser.py)
 - [backend/tests/test_mimit_ingestion_service.py](/Users/gionsi/Documents/personal_projects/pieno_smart/backend/tests/test_mimit_ingestion_service.py)
+- [backend/tests/test_mimit_dataset_client.py](/Users/gionsi/Documents/personal_projects/pieno_smart/backend/tests/test_mimit_dataset_client.py)
+- [backend/tests/test_mimit_ingestion_integration.py](/Users/gionsi/Documents/personal_projects/pieno_smart/backend/tests/test_mimit_ingestion_integration.py)
 
 ## Current Gaps And Next Steps
 
@@ -268,10 +304,14 @@ The ingestion stack is now at the point where parsing and first persistence logi
 
 - add fixture files from real or representative MIMIT samples
 - add integration tests against PostgreSQL/PostGIS
-- add the real MIMIT download client
 - improve anomaly handling for stations without coordinates
 - persist richer station metadata if product needs it
 - expose ingestion execution through a scheduler-ready command path
+
+Integration-test note:
+
+- the DB-backed ingestion test uses the active `DATABASE_URL`
+- if the configured PostgreSQL database is not reachable, the test is skipped automatically
 
 ## Practical Mental Model
 
