@@ -324,15 +324,23 @@ class MimitIngestionService:
                 service_mode,
                 price,
                 price_effective_at,
-                source_updated_at
+                source_updated_at,
+                updated_at
             ) VALUES (
                 :station_id,
                 CAST(:fuel_type AS fuel_type),
                 CAST(:service_mode AS service_mode),
                 :price,
                 :price_effective_at,
-                :source_updated_at
+                :source_updated_at,
+                now()
             )
+            ON CONFLICT (station_id, fuel_type, service_mode) DO UPDATE
+            SET
+                price = EXCLUDED.price,
+                price_effective_at = EXCLUDED.price_effective_at,
+                source_updated_at = EXCLUDED.source_updated_at,
+                updated_at = EXCLUDED.updated_at
             """
         )
         for batch in chunked(rows, BATCH_SIZE):
