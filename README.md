@@ -111,6 +111,7 @@ Architecture and planning:
 - [Docs Index](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/README.md)
 - [Solution Architecture](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/solution-architecture.md)
 - [Tech Stack And Framework Choice](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/tech-stack-and-framework-choice.md)
+- [Backend Ingestion And Data Flow](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/backend-ingestion-and-data-flow.md)
 - [Implementation Backlog](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/implementation-backlog.md)
 
 Product and contracts:

@@ -30,6 +30,7 @@ This folder contains the agreed MVP documentation set for PienoSmart.
 - [Tech Stack And Framework Choice](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/tech-stack-and-framework-choice.md)
 - [Domain Data Contract](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/domain-data-contract.md)
 - [API Contract Outline](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/api-contract-outline.md)
+- [Backend Ingestion And Data Flow](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/backend-ingestion-and-data-flow.md)
 - [Implementation Backlog](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/implementation-backlog.md)
 - [Ingestion Runbook](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/ingestion-runbook.md)
 - [GitHub Project Setup](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/github-project-setup.md)
