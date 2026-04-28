@@ -16,6 +16,7 @@ from app.models.common import SyncStatus
 
 ROME_TZ = ZoneInfo("Europe/Rome")
 POSTAL_CODE_RE = re.compile(r"\b(\d{5})\b")
+EARLY_PROGRESS_MARKERS = {1, 100, 500, 1_000}
 PROGRESS_LOG_EVERY = 5_000
 
 
@@ -89,7 +90,7 @@ class MimitIngestionService:
         station_data: StationFileParseResult,
         counters: IngestionCounters,
     ) -> dict[str, int]:
-        station_lookup: dict[str, int] = {}
+        station_lookup = self._load_station_lookup()
         source_updated_at = source_timestamp(station_data.extraction_date)
         total_rows = len(station_data.rows)
         phase_started_at = perf_counter()
@@ -97,18 +98,23 @@ class MimitIngestionService:
         self._log(
             "Station upsert phase started",
             total_rows=total_rows,
+            existing_stations=len(station_lookup),
         )
 
         for index, row in enumerate(station_data.rows, start=1):
             counters.station_rows_seen += 1
-            station_id = self._upsert_station(row, source_updated_at)
+            station_id = self._upsert_station(
+                row,
+                source_updated_at,
+                existing_station_id=station_lookup.get(row.ministerial_station_id),
+            )
             if station_id is None:
                 counters.station_rows_skipped += 1
             else:
                 station_lookup[row.ministerial_station_id] = station_id
                 counters.station_rows_upserted += 1
 
-            if index % PROGRESS_LOG_EVERY == 0 or index == total_rows:
+            if index in EARLY_PROGRESS_MARKERS or index % PROGRESS_LOG_EVERY == 0 or index == total_rows:
                 self._log(
                     "Station upsert progress",
                     processed=index,
@@ -178,14 +184,17 @@ class MimitIngestionService:
             elapsed_seconds=f"{perf_counter() - phase_started_at:.2f}",
         )
 
-    def _upsert_station(self, row: ParsedStationRow, source_updated_at: datetime) -> int | None:
+    def _upsert_station(
+        self,
+        row: ParsedStationRow,
+        source_updated_at: datetime,
+        *,
+        existing_station_id: int | None,
+    ) -> int | None:
         location_wkt = station_location_wkt(row)
         if location_wkt is None:
             return None
 
-        existing_id = self.db.scalar(
-            select(Station.id).where(Station.ministerial_station_id == row.ministerial_station_id)
-        )
         params = {
             "ministerial_station_id": row.ministerial_station_id,
             "name": row.name,
@@ -201,7 +210,7 @@ class MimitIngestionService:
             "source_updated_at": source_updated_at,
         }
 
-        if existing_id is None:
+        if existing_station_id is None:
             inserted_id = self.db.execute(
                 text(
                     """
@@ -259,9 +268,9 @@ class MimitIngestionService:
                 WHERE id = :station_id
                 """
             ),
-            {**params, "station_id": existing_id},
+            {**params, "station_id": existing_station_id},
         )
-        return int(existing_id)
+        return int(existing_station_id)
 
     def _upsert_current_price(
         self,
