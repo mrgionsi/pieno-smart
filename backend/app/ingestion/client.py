@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from html.parser import HTMLParser
+import time
 from urllib.parse import urljoin
 
 import httpx
@@ -30,7 +31,18 @@ class MimitDatasetClient:
     ) -> None:
         self.settings = settings or get_settings()
         self._own_client = http_client is None
-        self.http_client = http_client or httpx.Client(timeout=self.settings.mimit_http_timeout_seconds)
+        self.http_client = http_client or httpx.Client(
+            timeout=self.settings.mimit_http_timeout_seconds,
+            follow_redirects=True,
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (compatible; PienoSmartBot/0.1; "
+                    "+https://github.com/mrgionsi/pieno-smart)"
+                ),
+                "Accept": "text/csv,text/plain,text/html,application/xhtml+xml,*/*",
+                "Connection": "close",
+            },
+        )
 
     def close(self) -> None:
         if self._own_client:
@@ -38,7 +50,7 @@ class MimitDatasetClient:
 
     def download_current_snapshot(self) -> MimitDownloadPayload:
         dataset_page_url = self.settings.mimit_dataset_page_url
-        dataset_page_response = self.http_client.get(dataset_page_url)
+        dataset_page_response = self._get_with_retry(dataset_page_url)
         dataset_page_response.raise_for_status()
 
         parser = DatasetPageLinkParser()
@@ -47,10 +59,10 @@ class MimitDatasetClient:
         prices_url = parser.require_url(PRICE_LINK_TEXT, dataset_page_url)
         stations_url = parser.require_url(STATION_LINK_TEXT, dataset_page_url)
 
-        stations_response = self.http_client.get(stations_url)
+        stations_response = self._get_with_retry(stations_url)
         stations_response.raise_for_status()
 
-        prices_response = self.http_client.get(prices_url)
+        prices_response = self._get_with_retry(prices_url)
         prices_response.raise_for_status()
 
         return MimitDownloadPayload(
@@ -60,6 +72,20 @@ class MimitDatasetClient:
             stations_content=stations_response.text,
             prices_content=prices_response.text,
         )
+
+    def _get_with_retry(self, url: str) -> httpx.Response:
+        last_error: Exception | None = None
+
+        for attempt in range(1, self.settings.mimit_http_max_retries + 1):
+            try:
+                return self.http_client.get(url)
+            except (httpx.RemoteProtocolError, httpx.ReadTimeout, httpx.ConnectError) as exc:
+                last_error = exc
+                if attempt == self.settings.mimit_http_max_retries:
+                    break
+                time.sleep(0.5 * attempt)
+
+        raise RuntimeError(f"Failed to fetch MIMIT resource after retries: {url}") from last_error
 
 
 class DatasetPageLinkParser(HTMLParser):

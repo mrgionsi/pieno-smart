@@ -1,13 +1,16 @@
 from decimal import Decimal
+from pathlib import Path
 
 from app.ingestion.parser import parse_price_csv, parse_station_csv
 from app.models.common import FuelType, ServiceMode
 
+FIXTURES_DIR = Path(__file__).parent / "fixtures" / "mimit"
+
 
 def test_parse_station_csv_with_header_row() -> None:
-    content = """2026-04-27
-idimpianto|Gestore|Bandiera|Tipo Impianto|Nome Impianto|Indirizzo|Comune|Provincia|Latitudine|Longitudine
-12345|Gestore Demo Srl|Q8|Stradale|Q8 Roma Centro|Via Roma 10|Roma|RM|41.9028|12.4964
+    content = """Estrazione del 2026-04-27
+idimpianto|Gestore|Bandiera|Tipo Impianto|Nome Impianto|Link|Indirizzo|Comune|Provincia|Latitudine|Longitudine
+12345|Gestore Demo Srl|Q8|Stradale|Q8 Roma Centro|gestori.prezzibenzina.it|Via Roma 10|Roma|RM|41.9028|12.4964
 """
 
     result = parse_station_csv(content)
@@ -22,8 +25,31 @@ idimpianto|Gestore|Bandiera|Tipo Impianto|Nome Impianto|Indirizzo|Comune|Provinc
     assert row.longitude == 12.4964
 
 
+def test_parse_station_csv_with_live_mimit_header_fixture() -> None:
+    result = parse_station_csv(
+        (FIXTURES_DIR / "anagrafica_live_sample_2026-04-27.csv").read_text(encoding="utf-8")
+    )
+
+    assert result.extraction_date.isoformat() == "2026-04-27"
+    assert len(result.rows) == 18
+    assert result.rows[0].ministerial_station_id == "59183"
+    assert result.rows[0].comune == "AGRIGENTO"
+    assert result.rows[-1].brand == "Pompe Bianche"
+
+
+def test_parse_station_csv_without_link_column_still_works() -> None:
+    content = """Estrazione del 2026-04-27
+12345|Gestore Demo Srl|Q8|Stradale|Q8 Roma Centro|Via Roma 10|Roma|RM|41.9028|12.4964
+"""
+
+    result = parse_station_csv(content)
+
+    assert len(result.rows) == 1
+    assert result.rows[0].ministerial_station_id == "12345"
+
+
 def test_parse_price_csv_with_header_row_and_normalization() -> None:
-    content = """2026-04-27
+    content = """Estrazione del 2026-04-27
 idimpianto|descCarburante|prezzo|isSelf|dtComu
 12345|Gasolio Speciale|1.739|1|27/04/2026 07:45:00
 12345|Benzina|1.819|0|27/04/2026 07:40:00
@@ -45,6 +71,19 @@ idimpianto|descCarburante|prezzo|isSelf|dtComu
     assert benzina_row.service_mode is ServiceMode.SERVITO
 
 
+def test_parse_price_csv_with_live_mimit_header_fixture() -> None:
+    result = parse_price_csv(
+        (FIXTURES_DIR / "prezzo_live_sample_2026-04-27.csv").read_text(encoding="utf-8")
+    )
+
+    assert result.extraction_date.isoformat() == "2026-04-27"
+    assert len(result.rows) == 18
+    assert result.rows[0].ministerial_station_id == "3464"
+    assert result.rows[0].fuel_type is FuelType.BENZINA
+    assert result.rows[0].service_mode is ServiceMode.SERVITO
+    assert result.rows[1].service_mode is ServiceMode.SELF
+
+
 def test_parse_price_csv_without_header_row() -> None:
     content = """2026-04-27
 54321|HVO Diesel|1.699|1|27/04/2026 07:30:00
@@ -58,8 +97,8 @@ def test_parse_price_csv_without_header_row() -> None:
 
 
 def test_parse_station_csv_rejects_wrong_column_count() -> None:
-    content = """2026-04-27
-idimpianto|Gestore|Bandiera|Tipo Impianto|Nome Impianto|Indirizzo|Comune|Provincia|Latitudine|Longitudine
+    content = """Estrazione del 2026-04-27
+idimpianto|Gestore|Bandiera|Tipo Impianto|Nome Impianto|Link|Indirizzo|Comune|Provincia|Latitudine|Longitudine
 12345|Gestore Demo Srl|Q8
 """
 
@@ -69,3 +108,13 @@ idimpianto|Gestore|Bandiera|Tipo Impianto|Nome Impianto|Indirizzo|Comune|Provinc
         assert "Unexpected column count" in str(exc)
     else:
         raise AssertionError("Expected parser to reject malformed station row")
+
+
+def test_parse_extraction_date_accepts_prefixed_header_line() -> None:
+    content = """Estrazione del 2026-04-27
+54321|HVO Diesel|1.699|1|27/04/2026 07:30:00
+"""
+
+    result = parse_price_csv(content)
+
+    assert result.extraction_date.isoformat() == "2026-04-27"

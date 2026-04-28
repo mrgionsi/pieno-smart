@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 from datetime import date
 from io import StringIO
+import re
 
 from app.ingestion.models import (
     ParsedPriceRow,
@@ -26,6 +27,20 @@ STATION_HEADERS = [
     "Bandiera",
     "Tipo Impianto",
     "Nome Impianto",
+    "Link",
+    "Indirizzo",
+    "Comune",
+    "Provincia",
+    "Latitudine",
+    "Longitudine",
+]
+
+STATION_HEADERS_LEGACY = [
+    "idimpianto",
+    "Gestore",
+    "Bandiera",
+    "Tipo Impianto",
+    "Nome Impianto",
     "Indirizzo",
     "Comune",
     "Provincia",
@@ -40,6 +55,8 @@ PRICE_HEADERS = [
     "isSelf",
     "dtComu",
 ]
+
+EXTRACTION_DATE_RE = re.compile(r"(\d{4}-\d{2}-\d{2})")
 
 
 def parse_station_csv(content: str) -> StationFileParseResult:
@@ -58,7 +75,7 @@ def parse_station_csv(content: str) -> StationFileParseResult:
             latitude=parse_optional_float(row.get("Latitudine")),
             longitude=parse_optional_float(row.get("Longitudine")),
         )
-        for row in _map_rows(rows, STATION_HEADERS)
+        for row in _map_station_rows(rows)
     ]
     return StationFileParseResult(extraction_date=extraction_date, rows=station_rows)
 
@@ -94,7 +111,16 @@ def _parse_rows(content: str) -> tuple[date, list[list[str]]]:
 def _parse_extraction_date(row: list[str]) -> date:
     if len(row) != 1:
         raise ValueError("First row must contain the extraction date")
-    return date.fromisoformat(row[0])
+
+    value = row[0].strip()
+    if not value:
+        raise ValueError("Missing extraction date value")
+
+    match = EXTRACTION_DATE_RE.search(value)
+    if match is None:
+        raise ValueError(f"Invalid extraction date header: {value}")
+
+    return date.fromisoformat(match.group(1))
 
 
 def _map_rows(rows: list[list[str]], expected_headers: list[str]) -> list[dict[str, str]]:
@@ -115,5 +141,39 @@ def _map_rows(rows: list[list[str]], expected_headers: list[str]) -> list[dict[s
     return mapped_rows
 
 
+def _map_station_rows(rows: list[list[str]]) -> list[dict[str, str]]:
+    if not rows:
+        return []
+
+    working_rows = rows
+    if _is_header_row(rows[0], STATION_HEADERS) or _is_header_row(rows[0], STATION_HEADERS_LEGACY):
+        working_rows = rows[1:]
+
+    mapped_rows: list[dict[str, str]] = []
+    for row in working_rows:
+        if len(row) == len(STATION_HEADERS):
+            mapped_rows.append(dict(zip(STATION_HEADERS, row, strict=True)))
+            continue
+        if len(row) == len(STATION_HEADERS_LEGACY):
+            legacy_row = dict(zip(STATION_HEADERS_LEGACY, row, strict=True))
+            legacy_row["Link"] = ""
+            mapped_rows.append(legacy_row)
+            continue
+        raise ValueError(
+            f"Unexpected column count. Expected {len(STATION_HEADERS)} or "
+            f"{len(STATION_HEADERS_LEGACY)}, got {len(row)}: {row}"
+        )
+    return mapped_rows
+
+
 def _is_header_row(row: list[str], expected_headers: list[str]) -> bool:
-    return row == expected_headers
+    if len(row) != len(expected_headers):
+        return False
+
+    return [_normalize_header_name(value) for value in row] == [
+        _normalize_header_name(value) for value in expected_headers
+    ]
+
+
+def _normalize_header_name(value: str) -> str:
+    return value.strip().casefold()

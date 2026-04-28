@@ -100,6 +100,7 @@ def test_end_to_end_ingestion_updates_stations_prices_and_price_changes() -> Non
         assert len(sync_runs) == 2
         assert all(run.status == SyncStatus.COMPLETED for run in sync_runs)
     finally:
+        db.rollback()
         _cleanup_test_data(db)
         db.close()
 

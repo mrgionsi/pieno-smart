@@ -23,6 +23,7 @@ class Settings(BaseSettings):
         "carburanti-prezzi-praticati-e-anagrafica-degli-impianti"
     )
     mimit_http_timeout_seconds: float = 30.0
+    mimit_http_max_retries: int = 3
 
 
 @lru_cache

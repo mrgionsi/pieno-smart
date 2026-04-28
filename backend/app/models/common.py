@@ -7,6 +7,10 @@ from sqlalchemy import TIMESTAMP, Enum, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 
+def _enum_values(enum_cls: type[enum.Enum]) -> list[str]:
+    return [member.value for member in enum_cls]
+
+
 class FuelType(str, enum.Enum):
     BENZINA = "benzina"
     DIESEL = "diesel"
@@ -34,10 +38,30 @@ class SyncStatus(str, enum.Enum):
     FAILED = "failed"
 
 
-fuel_type_enum = Enum(FuelType, name="fuel_type", create_type=False)
-service_mode_enum = Enum(ServiceMode, name="service_mode", create_type=False)
-alert_type_enum = Enum(AlertType, name="alert_type", create_type=False)
-sync_status_enum = Enum(SyncStatus, name="sync_status", create_type=False)
+fuel_type_enum = Enum(
+    FuelType,
+    name="fuel_type",
+    create_type=False,
+    values_callable=_enum_values,
+)
+service_mode_enum = Enum(
+    ServiceMode,
+    name="service_mode",
+    create_type=False,
+    values_callable=_enum_values,
+)
+alert_type_enum = Enum(
+    AlertType,
+    name="alert_type",
+    create_type=False,
+    values_callable=_enum_values,
+)
+sync_status_enum = Enum(
+    SyncStatus,
+    name="sync_status",
+    create_type=False,
+    values_callable=_enum_values,
+)
 
 
 class TimestampMixin:
