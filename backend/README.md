@@ -92,6 +92,11 @@ API_PORT=8000
 APP_ENV=local
 ```
 
+Config note:
+
+- the backend resolves `.env` from the `backend/` directory itself
+- this means commands behave consistently whether you launch them from the repo root or from `backend/`
+
 ### 6. Run database migrations
 
 Apply the initial schema and extensions:

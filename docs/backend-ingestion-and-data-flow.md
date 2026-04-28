@@ -27,6 +27,11 @@ Current modules:
 - `app.alerts`
   - will contain alert evaluation logic
 
+Configuration note:
+
+- backend settings are loaded from `backend/.env` via an absolute path
+- this avoids accidental fallback to default database settings when commands are run from the repo root instead of the `backend/` folder
+
 ## Separation Of Concerns
 
 The backend intentionally separates three different concerns:
