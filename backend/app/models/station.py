@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import TIMESTAMP, BigInteger, Boolean, Index, Text, text
+from geoalchemy2 import Geometry
+from sqlalchemy import TIMESTAMP, BigInteger, Boolean, Index, Text, cast, func, text
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 
 from app.db.base import Base
 from app.db.types import GeographyPoint
@@ -32,6 +33,8 @@ class Station(TimestampMixin, Base):
     services_json: Mapped[dict[str, object] | None] = mapped_column(JSONB)
     location: Mapped[str] = mapped_column(GeographyPoint(), nullable=False)
     source_updated_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
+    latitude = column_property(func.ST_Y(cast(location, Geometry)))
+    longitude = column_property(func.ST_X(cast(location, Geometry)))
 
     current_prices = relationship("CurrentPrice", back_populates="station")
     price_changes = relationship("PriceChange", back_populates="station")
