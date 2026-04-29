@@ -1,31 +1,38 @@
 from fastapi import APIRouter, Query
-from sqlalchemy import select
 
 from app.api.deps import DbSession
+from app.catalog.schemas import NearbySort, NearbyStationsQuery, NearbyStationsResponse
+from app.catalog.service import StationCatalogService
 from app.models import Station
+from app.models.common import FuelType, ServiceMode
 
 router = APIRouter()
 
 
-@router.get("/nearby")
+@router.get("/nearby", response_model=NearbyStationsResponse)
 def list_nearby_stations(
     db: DbSession,
     lat: float = Query(..., ge=-90, le=90),
     lon: float = Query(..., ge=-180, le=180),
     radius_meters: int = Query(5000, gt=0, le=50000),
-    fuel_type: str | None = Query(None),
-) -> dict[str, object]:
-    station_count = db.scalar(select(Station.id).limit(1))
-    return {
-        "items": [],
-        "db_ready": station_count is not None,
-        "filters": {
-            "lat": lat,
-            "lon": lon,
-            "radius_meters": radius_meters,
-            "fuel_type": fuel_type,
-        },
-    }
+    fuel_type: FuelType | None = Query(None),
+    service_mode: ServiceMode | None = Query(None),
+    brand: str | None = Query(None),
+    sort: NearbySort = Query(NearbySort.DISTANCE),
+    limit: int = Query(20, gt=0, le=100),
+) -> NearbyStationsResponse:
+    filters = NearbyStationsQuery(
+        lat=lat,
+        lon=lon,
+        radius_meters=radius_meters,
+        fuel_type=fuel_type,
+        service_mode=service_mode,
+        brand=brand,
+        sort=sort,
+        limit=limit,
+    )
+    items = StationCatalogService(db).list_nearby_stations(filters)
+    return NearbyStationsResponse(items=items, filters=filters)
 
 
 @router.get("/{station_id}")
