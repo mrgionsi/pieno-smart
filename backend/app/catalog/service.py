@@ -7,6 +7,7 @@ from sqlalchemy import select, text
 from sqlalchemy.orm import Session, joinedload
 
 from app.catalog.schemas import (
+    NearbySort,
     NearbyStationItem,
     NearbyStationsQuery,
     StationDetailResponse,
@@ -14,6 +15,7 @@ from app.catalog.schemas import (
     freshness_status_for,
 )
 from app.models import Station
+from app.recommendation import rank_nearby_stations_for_convenience
 
 ROME_TZ = ZoneInfo("Europe/Rome")
 
@@ -27,60 +29,75 @@ class StationCatalogService:
         require_price = (
             query.fuel_type is not None
             or query.service_mode is not None
-            or query.sort.value == "price"
+            or query.sort in {NearbySort.PRICE, NearbySort.CONVENIENCE}
         )
-        rows = self.db.execute(
-            text(
-                """
-                WITH search_point AS (
-                    SELECT ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography AS point
-                )
+        is_convenience_sort = query.sort == NearbySort.CONVENIENCE
+        sql = """
+            WITH search_point AS (
+                SELECT ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography AS point
+            )
+            SELECT
+                s.id,
+                s.ministerial_station_id,
+                s.name,
+                s.brand,
+                s.address,
+                s.comune,
+                s.provincia,
+                s.postal_code,
+                s.is_highway_station,
+                ST_Y(s.location::geometry) AS latitude,
+                ST_X(s.location::geometry) AS longitude,
+                ST_Distance(s.location, sp.point) AS distance_meters,
+                cp.fuel_type AS selected_fuel_type,
+                cp.service_mode AS selected_service_mode,
+                cp.price AS current_price,
+                cp.price_effective_at,
+                cp.source_updated_at
+            FROM stations s
+            CROSS JOIN search_point sp
+            LEFT JOIN LATERAL (
                 SELECT
-                    s.id,
-                    s.ministerial_station_id,
-                    s.name,
-                    s.brand,
-                    s.address,
-                    s.comune,
-                    s.provincia,
-                    s.postal_code,
-                    s.is_highway_station,
-                    ST_Y(s.location::geometry) AS latitude,
-                    ST_X(s.location::geometry) AS longitude,
-                    ST_Distance(s.location, sp.point) AS distance_meters,
-                    cp.fuel_type AS selected_fuel_type,
-                    cp.service_mode AS selected_service_mode,
-                    cp.price AS current_price,
-                    cp.price_effective_at,
-                    cp.source_updated_at
-                FROM stations s
-                CROSS JOIN search_point sp
-                LEFT JOIN LATERAL (
-                    SELECT
-                        c.fuel_type,
-                        c.service_mode,
-                        c.price,
-                        c.price_effective_at,
-                        c.source_updated_at
-                    FROM current_prices c
-                    WHERE c.station_id = s.id
-                      AND (CAST(:fuel_type AS fuel_type) IS NULL OR c.fuel_type = CAST(:fuel_type AS fuel_type))
-                      AND (CAST(:service_mode AS service_mode) IS NULL OR c.service_mode = CAST(:service_mode AS service_mode))
-                    ORDER BY c.price ASC, c.price_effective_at DESC NULLS LAST
-                    LIMIT 1
-                ) cp ON TRUE
-                WHERE s.is_active IS TRUE
-                  AND ST_DWithin(s.location, sp.point, :radius_meters)
-                  AND (CAST(:brand AS text) IS NULL OR s.brand = CAST(:brand AS text))
-                  AND (:require_price IS FALSE OR cp.price IS NOT NULL)
+                    c.fuel_type,
+                    c.service_mode,
+                    c.price,
+                    c.price_effective_at,
+                    c.source_updated_at
+                FROM current_prices c
+                WHERE c.station_id = s.id
+                  AND (CAST(:fuel_type AS fuel_type) IS NULL OR c.fuel_type = CAST(:fuel_type AS fuel_type))
+                  AND (
+                      :is_convenience_sort IS TRUE
+                      OR CAST(:service_mode AS service_mode) IS NULL
+                      OR c.service_mode = CAST(:service_mode AS service_mode)
+                  )
                 ORDER BY
-                    CASE WHEN :sort = 'price' THEN cp.price END ASC NULLS LAST,
-                    CASE WHEN :sort = 'price' THEN ST_Distance(s.location, sp.point) END ASC,
-                    CASE WHEN :sort = 'distance' THEN ST_Distance(s.location, sp.point) END ASC,
-                    s.id ASC
-                LIMIT :limit
-                """
-            ),
+                    CASE
+                        WHEN :is_convenience_sort IS TRUE
+                         AND CAST(:service_mode AS service_mode) IS NOT NULL
+                         AND c.service_mode = CAST(:service_mode AS service_mode)
+                        THEN 0
+                        ELSE 1
+                    END ASC,
+                    c.price ASC,
+                    c.price_effective_at DESC NULLS LAST
+                LIMIT 1
+            ) cp ON TRUE
+            WHERE s.is_active IS TRUE
+              AND ST_DWithin(s.location, sp.point, :radius_meters)
+              AND (CAST(:brand AS text) IS NULL OR s.brand = CAST(:brand AS text))
+              AND (:require_price IS FALSE OR cp.price IS NOT NULL)
+            ORDER BY
+                CASE WHEN :sort = 'price' THEN cp.price END ASC NULLS LAST,
+                CASE WHEN :sort = 'price' THEN ST_Distance(s.location, sp.point) END ASC,
+                CASE WHEN :sort IN ('distance', 'convenience') THEN ST_Distance(s.location, sp.point) END ASC,
+                s.id ASC
+        """
+        if not is_convenience_sort:
+            sql += "\nLIMIT :limit"
+
+        rows = self.db.execute(
+            text(sql),
             {
                 "lat": query.lat,
                 "lon": query.lon,
@@ -89,6 +106,7 @@ class StationCatalogService:
                 "service_mode": query.service_mode.value if query.service_mode is not None else None,
                 "brand": query.brand,
                 "require_price": require_price,
+                "is_convenience_sort": is_convenience_sort,
                 "sort": query.sort.value,
                 "limit": query.limit,
             },
@@ -119,6 +137,15 @@ class StationCatalogService:
                     freshness_status=freshness_status_for(source_updated_at, now=now),
                 )
             )
+
+        if is_convenience_sort:
+            ranked_items = rank_nearby_stations_for_convenience(
+                items,
+                radius_meters=query.radius_meters,
+                requested_service_mode=query.service_mode,
+            )
+            return ranked_items[: query.limit]
+
         return items
 
     def get_station_detail(self, station_id: int) -> StationDetailResponse | None:

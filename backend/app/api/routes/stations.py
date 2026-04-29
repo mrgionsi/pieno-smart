@@ -25,6 +25,12 @@ def list_nearby_stations(
     sort: NearbySort = Query(NearbySort.DISTANCE),
     limit: int = Query(20, gt=0, le=100),
 ) -> NearbyStationsResponse:
+    if sort == NearbySort.CONVENIENCE and fuel_type is None:
+        raise HTTPException(
+            status_code=422,
+            detail="fuel_type is required when sort=convenience",
+        )
+
     filters = NearbyStationsQuery(
         lat=lat,
         lon=lon,
