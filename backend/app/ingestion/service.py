@@ -208,7 +208,12 @@ class MimitIngestionService:
         source_updated_at = source_timestamp(price_data.extraction_date)
         total_rows = len(price_data.rows)
         phase_started_at = perf_counter()
-        current_price_lookup = self._load_current_price_lookup()
+        relevant_station_ids = {
+            station_id
+            for row in price_data.rows
+            if (station_id := station_lookup.get(row.ministerial_station_id)) is not None
+        }
+        current_price_lookup = self._load_current_price_lookup(relevant_station_ids)
 
         self._log(
             "Price upsert phase started",
@@ -496,7 +501,12 @@ class MimitIngestionService:
             for row in rows
         }
 
-    def _load_current_price_lookup(self) -> dict[tuple[int, FuelType, ServiceMode], CurrentPriceState]:
+    def _load_current_price_lookup(
+        self,
+        station_ids: set[int],
+    ) -> dict[tuple[int, FuelType, ServiceMode], CurrentPriceState]:
+        if not station_ids:
+            return {}
         rows = self.db.execute(
             select(
                 CurrentPrice.id,
@@ -505,7 +515,7 @@ class MimitIngestionService:
                 CurrentPrice.service_mode,
                 CurrentPrice.price,
                 CurrentPrice.price_effective_at,
-            )
+            ).where(CurrentPrice.station_id.in_(station_ids))
         ).all()
         return {
             (
