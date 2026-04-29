@@ -64,7 +64,7 @@ class VehicleProfile(TimestampMixin, Base):
     )
     is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
 
-    user = relationship("AppUser", back_populates="vehicle_profiles")
+    user = relationship("AppUser", back_populates="vehicle_profiles", foreign_keys=[user_id])
     alerts = relationship("Alert", back_populates="vehicle_profile")
 
 
