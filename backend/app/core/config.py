@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     api_host: str = "127.0.0.1"
     api_port: int = 8000
     database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/pienosmart"
+    dev_current_user_email: str = "demo@pienosmart.local"
+    dev_current_user_display_name: str = "Demo User"
+    dev_current_user_subject: str = "dev-local-user"
     mimit_dataset_page_url: str = (
         "https://www.mimit.gov.it/it/open-data/elenco-dataset/"
         "carburanti-prezzi-praticati-e-anagrafica-degli-impianti"
