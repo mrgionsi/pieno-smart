@@ -12,6 +12,7 @@ from app.models.common import FuelType, ServiceMode
 class NearbySort(str, Enum):
     DISTANCE = "distance"
     PRICE = "price"
+    CONVENIENCE = "convenience"
 
 
 class FreshnessStatus(str, Enum):
@@ -56,6 +57,8 @@ class NearbyStationItem(StationBaseResponse):
     selected_service_mode: ServiceMode | None
     current_price: Decimal | None
     price_effective_at: datetime | None
+    score: float | None = None
+    match_reasons: list[str] = Field(default_factory=list)
 
 
 
