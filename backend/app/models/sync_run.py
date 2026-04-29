@@ -29,7 +29,31 @@ class SyncRun(Base):
         nullable=False,
         server_default=text("0"),
     )
+    station_records_inserted: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    station_records_updated: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    station_records_unchanged_skipped: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        server_default=text("0"),
+    )
+    station_records_invalid_skipped: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        server_default=text("0"),
+    )
     price_records_upserted: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        server_default=text("0"),
+    )
+    price_records_inserted: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    price_records_updated: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    price_records_unchanged_skipped: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        server_default=text("0"),
+    )
+    price_records_station_missing_skipped: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
         server_default=text("0"),
