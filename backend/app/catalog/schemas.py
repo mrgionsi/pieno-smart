@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from decimal import Decimal
 from enum import Enum
+import uuid
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -29,6 +30,7 @@ class NearbyStationsQuery(BaseModel):
     radius_meters: int = Field(default=5000, gt=0, le=50000)
     fuel_type: FuelType | None = None
     service_mode: ServiceMode | None = None
+    vehicle_profile_id: uuid.UUID | None = None
     brand: str | None = None
     sort: NearbySort = NearbySort.DISTANCE
     limit: int = Field(default=20, gt=0, le=100)
