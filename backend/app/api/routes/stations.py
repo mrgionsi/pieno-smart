@@ -1,9 +1,13 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
 from app.api.deps import DbSession
-from app.catalog.schemas import NearbySort, NearbyStationsQuery, NearbyStationsResponse
+from app.catalog.schemas import (
+    NearbySort,
+    NearbyStationsQuery,
+    NearbyStationsResponse,
+    StationDetailResponse,
+)
 from app.catalog.service import StationCatalogService
-from app.models import Station
 from app.models.common import FuelType, ServiceMode
 
 router = APIRouter()
@@ -35,11 +39,9 @@ def list_nearby_stations(
     return NearbyStationsResponse(items=items, filters=filters)
 
 
-@router.get("/{station_id}")
-def get_station(station_id: int, db: DbSession) -> dict[str, object]:
-    station = db.get(Station, station_id)
-    return {
-        "id": station_id,
-        "exists": station is not None,
-        "detail": "not implemented",
-    }
+@router.get("/{station_id}", response_model=StationDetailResponse)
+def get_station(station_id: int, db: DbSession) -> StationDetailResponse:
+    station = StationCatalogService(db).get_station_detail(station_id)
+    if station is None:
+        raise HTTPException(status_code=404, detail="Station not found")
+    return station

@@ -32,8 +32,7 @@ class NearbyStationsQuery(BaseModel):
     sort: NearbySort = NearbySort.DISTANCE
     limit: int = Field(default=20, gt=0, le=100)
 
-
-class NearbyStationItem(BaseModel):
+class StationBaseResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -47,18 +46,38 @@ class NearbyStationItem(BaseModel):
     is_highway_station: bool | None
     latitude: float
     longitude: float
+    source_updated_at: datetime | None
+    freshness_status: FreshnessStatus
+
+
+class NearbyStationItem(StationBaseResponse):
     distance_meters: float
     selected_fuel_type: FuelType | None
     selected_service_mode: ServiceMode | None
     current_price: Decimal | None
     price_effective_at: datetime | None
-    source_updated_at: datetime | None
-    freshness_status: FreshnessStatus
+
 
 
 class NearbyStationsResponse(BaseModel):
     items: list[NearbyStationItem]
     filters: NearbyStationsQuery
+
+
+class StationPriceItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    fuel_type: FuelType
+    service_mode: ServiceMode
+    price: Decimal
+    price_effective_at: datetime | None
+    source_updated_at: datetime | None
+    freshness_status: FreshnessStatus
+
+
+class StationDetailResponse(StationBaseResponse):
+    prices: list[StationPriceItem]
+
 
 
 def freshness_status_for(source_updated_at: datetime | None, *, now: datetime) -> FreshnessStatus:
