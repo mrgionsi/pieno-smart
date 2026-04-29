@@ -5,17 +5,25 @@ from zoneinfo import ZoneInfo
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import delete, select, text
+from sqlalchemy import delete, select, text, update
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.deps import get_db
 from app.main import create_app
 from app.db.session import SessionLocal
-from app.models import CurrentPrice, Station
+from app.models import AppUser, CurrentPrice, Station, VehicleProfile
+from app.models.common import FuelType, ServiceMode
 
 ROME_TZ = ZoneInfo("Europe/Rome")
 TEST_STATION_IDS = ["99110001", "99110002", "99110003"]
 TEST_BRAND = "Test Nearby Brand"
+TEST_USER_EMAIL = "stations-nearby-test@pienosmart.local"
+TEST_USER_SUBJECT = "stations-nearby-user"
+TEST_USER_HEADERS = {
+    "X-Dev-User-Email": TEST_USER_EMAIL,
+    "X-Dev-User-Display-Name": "Nearby Test User",
+    "X-Dev-User-Subject": TEST_USER_SUBJECT,
+}
 
 
 def _db_available() -> bool:
@@ -221,7 +229,25 @@ def test_nearby_stations_rejects_convenience_sort_without_fuel_type() -> None:
     )
 
     assert response.status_code == 422
-    assert response.json()["detail"] == "fuel_type is required when sort=convenience"
+    assert response.json()["detail"] == "fuel_type or vehicle_profile_id is required when sort=convenience"
+
+
+def test_nearby_stations_requires_auth_when_vehicle_profile_id_is_provided() -> None:
+    client = TestClient(create_app())
+
+    response = client.get(
+        "/api/stations/nearby",
+        params={
+            "lat": 41.0586,
+            "lon": 14.3027,
+            "radius_meters": 5000,
+            "vehicle_profile_id": "11111111-1111-1111-1111-111111111111",
+            "sort": "distance",
+        },
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Authentication is required when vehicle_profile_id is provided"
 
 
 @db_required
@@ -381,6 +407,352 @@ def test_nearby_stations_returns_convenience_ranking_with_scores_and_reasons() -
 
 
 @db_required
+def test_nearby_stations_supports_anonymous_search_with_explicit_fuel() -> None:
+    db = SessionLocal()
+    try:
+        _cleanup_test_data(db)
+        now = datetime.now(ROME_TZ)
+        db.execute(
+            text(
+                """
+                INSERT INTO stations (
+                    ministerial_station_id,
+                    name,
+                    brand,
+                    address,
+                    comune,
+                    provincia,
+                    postal_code,
+                    is_highway_station,
+                    is_active,
+                    services_json,
+                    location,
+                    source_updated_at
+                ) VALUES
+                    (:sid1, 'Anonymous Station', :brand, 'Via Test 1', 'Roma', 'RM', '00100', false, true, CAST(NULL AS jsonb), ST_GeogFromText('SRID=4326;POINT(12.5000 41.9000)'), :now)
+                """
+            ),
+            {"sid1": TEST_STATION_IDS[0], "brand": TEST_BRAND, "now": now},
+        )
+        station_id = db.scalar(select(Station.id).where(Station.ministerial_station_id == TEST_STATION_IDS[0]))
+        assert station_id is not None
+        db.execute(
+            text(
+                """
+                INSERT INTO current_prices (
+                    station_id,
+                    fuel_type,
+                    service_mode,
+                    price,
+                    price_effective_at,
+                    source_updated_at
+                ) VALUES
+                    (:station_id, CAST('benzina' AS fuel_type), CAST('self' AS service_mode), 1.799, :now, :now)
+                """
+            ),
+            {"station_id": station_id, "now": now},
+        )
+        db.commit()
+
+        client = TestClient(create_app())
+        response = client.get(
+            "/api/stations/nearby",
+            params={
+                "lat": 41.9000,
+                "lon": 12.5000,
+                "radius_meters": 5000,
+                "fuel_type": "benzina",
+                "service_mode": "self",
+                "brand": TEST_BRAND,
+                "sort": "price",
+            },
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["filters"]["vehicle_profile_id"] is None
+        assert body["filters"]["fuel_type"] == "benzina"
+        assert len(body["items"]) == 1
+        assert body["items"][0]["selected_fuel_type"] == "benzina"
+    finally:
+        db.rollback()
+        _cleanup_test_data(db)
+        db.close()
+
+
+@db_required
+def test_nearby_stations_uses_vehicle_profile_defaults_for_convenience_sort() -> None:
+    db = SessionLocal()
+    try:
+        _cleanup_test_data(db)
+        _cleanup_test_user_data(db)
+        now = datetime.now(ROME_TZ)
+        stale = now - timedelta(days=4)
+
+        user = AppUser(
+            email=TEST_USER_EMAIL,
+            display_name="Nearby Test User",
+            external_auth_subject=TEST_USER_SUBJECT,
+        )
+        db.add(user)
+        db.flush()
+
+        profile = VehicleProfile(
+            user_id=user.id,
+            name="Diesel Self",
+            fuel_type=FuelType.DIESEL,
+            avg_consumption_l_per_100km="5.40",
+            preferred_service_mode=ServiceMode.SELF,
+            preferred_brands=[],
+            excluded_brands=[],
+            is_default=False,
+        )
+        db.add(profile)
+        db.flush()
+        user.default_vehicle_profile_id = profile.id
+
+        db.execute(
+            text(
+                """
+                INSERT INTO stations (
+                    ministerial_station_id,
+                    name,
+                    brand,
+                    address,
+                    comune,
+                    provincia,
+                    postal_code,
+                    is_highway_station,
+                    is_active,
+                    services_json,
+                    location,
+                    source_updated_at
+                ) VALUES
+                    (:sid1, 'Profile Station 1', :brand, 'Via Test 1', 'Roma', 'RM', '00100', false, true, CAST(NULL AS jsonb), ST_GeogFromText('SRID=4326;POINT(12.5000 41.9000)'), :now),
+                    (:sid2, 'Profile Station 2', :brand, 'Via Test 2', 'Roma', 'RM', '00100', false, true, CAST(NULL AS jsonb), ST_GeogFromText('SRID=4326;POINT(12.5100 41.9050)'), :now)
+                """
+            ),
+            {"sid1": TEST_STATION_IDS[0], "sid2": TEST_STATION_IDS[1], "brand": TEST_BRAND, "now": now},
+        )
+
+        station_ids = db.execute(
+            select(Station.id, Station.ministerial_station_id).where(Station.ministerial_station_id.in_(TEST_STATION_IDS))
+        ).all()
+        station_lookup = {ministerial_station_id: station_id for station_id, ministerial_station_id in station_ids}
+
+        db.execute(
+            text(
+                """
+                INSERT INTO current_prices (
+                    station_id,
+                    fuel_type,
+                    service_mode,
+                    price,
+                    price_effective_at,
+                    source_updated_at
+                ) VALUES
+                    (:station1, CAST('diesel' AS fuel_type), CAST('self' AS service_mode), 1.699, :now, :now),
+                    (:station1, CAST('benzina' AS fuel_type), CAST('servito' AS service_mode), 1.850, :now, :now),
+                    (:station2, CAST('diesel' AS fuel_type), CAST('servito' AS service_mode), 1.689, :stale, :stale)
+                """
+            ),
+            {
+                "station1": station_lookup[TEST_STATION_IDS[0]],
+                "station2": station_lookup[TEST_STATION_IDS[1]],
+                "now": now,
+                "stale": stale,
+            },
+        )
+        db.commit()
+
+        client = TestClient(create_app())
+        response = client.get(
+            "/api/stations/nearby",
+            headers=TEST_USER_HEADERS,
+            params={
+                "lat": 41.9000,
+                "lon": 12.5000,
+                "radius_meters": 5000,
+                "vehicle_profile_id": str(profile.id),
+                "brand": TEST_BRAND,
+                "sort": "convenience",
+            },
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["filters"]["vehicle_profile_id"] == str(profile.id)
+        assert body["filters"]["fuel_type"] == "diesel"
+        assert body["filters"]["service_mode"] == "self"
+        assert len(body["items"]) == 2
+        assert all(item["selected_fuel_type"] == "diesel" for item in body["items"])
+        assert any(item["selected_service_mode"] == "self" for item in body["items"])
+        assert any(
+            "matches requested self service" in item["match_reasons"]
+            for item in body["items"]
+        )
+    finally:
+        db.rollback()
+        _cleanup_test_data(db)
+        _cleanup_test_user_data(db)
+        db.close()
+
+
+@db_required
+def test_nearby_stations_explicit_query_values_override_vehicle_profile_defaults() -> None:
+    db = SessionLocal()
+    try:
+        _cleanup_test_data(db)
+        _cleanup_test_user_data(db)
+        now = datetime.now(ROME_TZ)
+
+        user = AppUser(
+            email=TEST_USER_EMAIL,
+            display_name="Nearby Test User",
+            external_auth_subject=TEST_USER_SUBJECT,
+        )
+        db.add(user)
+        db.flush()
+
+        profile = VehicleProfile(
+            user_id=user.id,
+            name="Diesel Self",
+            fuel_type=FuelType.DIESEL,
+            avg_consumption_l_per_100km="5.40",
+            preferred_service_mode=ServiceMode.SELF,
+            preferred_brands=[],
+            excluded_brands=[],
+            is_default=False,
+        )
+        db.add(profile)
+        db.flush()
+        user.default_vehicle_profile_id = profile.id
+
+        db.execute(
+            text(
+                """
+                INSERT INTO stations (
+                    ministerial_station_id,
+                    name,
+                    brand,
+                    address,
+                    comune,
+                    provincia,
+                    postal_code,
+                    is_highway_station,
+                    is_active,
+                    services_json,
+                    location,
+                    source_updated_at
+                ) VALUES
+                    (:sid1, 'Override Station', :brand, 'Via Test 1', 'Roma', 'RM', '00100', false, true, CAST(NULL AS jsonb), ST_GeogFromText('SRID=4326;POINT(12.5000 41.9000)'), :now)
+                """
+            ),
+            {"sid1": TEST_STATION_IDS[0], "brand": TEST_BRAND, "now": now},
+        )
+        station_id = db.scalar(select(Station.id).where(Station.ministerial_station_id == TEST_STATION_IDS[0]))
+        assert station_id is not None
+
+        db.execute(
+            text(
+                """
+                INSERT INTO current_prices (
+                    station_id,
+                    fuel_type,
+                    service_mode,
+                    price,
+                    price_effective_at,
+                    source_updated_at
+                ) VALUES
+                    (:station_id, CAST('benzina' AS fuel_type), CAST('servito' AS service_mode), 1.799, :now, :now),
+                    (:station_id, CAST('diesel' AS fuel_type), CAST('self' AS service_mode), 1.699, :now, :now)
+                """
+            ),
+            {"station_id": station_id, "now": now},
+        )
+        db.commit()
+
+        client = TestClient(create_app())
+        response = client.get(
+            "/api/stations/nearby",
+            headers=TEST_USER_HEADERS,
+            params={
+                "lat": 41.9000,
+                "lon": 12.5000,
+                "radius_meters": 5000,
+                "vehicle_profile_id": str(profile.id),
+                "fuel_type": "benzina",
+                "service_mode": "servito",
+                "brand": TEST_BRAND,
+                "sort": "convenience",
+            },
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["filters"]["fuel_type"] == "benzina"
+        assert body["filters"]["service_mode"] == "servito"
+        assert body["items"][0]["selected_fuel_type"] == "benzina"
+        assert body["items"][0]["selected_service_mode"] == "servito"
+    finally:
+        db.rollback()
+        _cleanup_test_data(db)
+        _cleanup_test_user_data(db)
+        db.close()
+
+
+@db_required
+def test_nearby_stations_rejects_vehicle_profile_from_another_user() -> None:
+    db = SessionLocal()
+    owner = None
+    try:
+        _cleanup_test_user_data(db)
+        owner = AppUser(
+            email="other-owner@pienosmart.local",
+            display_name="Other Owner",
+            external_auth_subject="other-owner-subject",
+        )
+        db.add(owner)
+        db.flush()
+        profile = VehicleProfile(
+            user_id=owner.id,
+            name="Other User Profile",
+            fuel_type=FuelType.DIESEL,
+            avg_consumption_l_per_100km="5.40",
+            preferred_service_mode=ServiceMode.SELF,
+            preferred_brands=[],
+            excluded_brands=[],
+            is_default=False,
+        )
+        db.add(profile)
+        db.commit()
+
+        client = TestClient(create_app(), raise_server_exceptions=False)
+        response = client.get(
+            "/api/stations/nearby",
+            headers=TEST_USER_HEADERS,
+            params={
+                "lat": 41.9000,
+                "lon": 12.5000,
+                "radius_meters": 5000,
+                "vehicle_profile_id": str(profile.id),
+                "sort": "distance",
+            },
+        )
+
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Vehicle profile not found"
+    finally:
+        db.rollback()
+        _cleanup_test_user_data(db)
+        if owner is not None:
+            db.execute(delete(VehicleProfile).where(VehicleProfile.user_id == owner.id))
+            db.execute(delete(AppUser).where(AppUser.id == owner.id))
+            db.commit()
+        db.close()
+
+
+@db_required
 def test_station_detail_returns_empty_prices_when_station_has_no_current_prices() -> None:
     db = SessionLocal()
     try:
@@ -514,4 +886,24 @@ def _cleanup_test_data(db) -> None:
     if station_ids:
         db.execute(delete(CurrentPrice).where(CurrentPrice.station_id.in_(station_ids)))
         db.execute(delete(Station).where(Station.id.in_(station_ids)))
+    db.commit()
+
+
+def _cleanup_test_user_data(db) -> None:
+    user = db.scalar(
+        select(AppUser).where(
+            (AppUser.email == TEST_USER_EMAIL)
+            | (AppUser.external_auth_subject == TEST_USER_SUBJECT)
+        )
+    )
+    if user is None:
+        return
+
+    db.execute(
+        update(AppUser)
+        .where(AppUser.id == user.id)
+        .values(default_vehicle_profile_id=None)
+    )
+    db.execute(delete(VehicleProfile).where(VehicleProfile.user_id == user.id))
+    db.execute(delete(AppUser).where(AppUser.id == user.id))
     db.commit()

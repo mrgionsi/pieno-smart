@@ -14,6 +14,9 @@ class VehicleProfileService:
     def __init__(self, db: Session) -> None:
         self.db = db
 
+    def get_profile(self, *, user: AppUser, profile_id: uuid.UUID) -> VehicleProfile:
+        return self._get_user_profile(user=user, profile_id=profile_id)
+
     def list_profiles(self, *, user: AppUser) -> list[VehicleProfile]:
         profiles = self.db.scalars(
             select(VehicleProfile)
