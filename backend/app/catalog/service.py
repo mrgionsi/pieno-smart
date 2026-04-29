@@ -3,15 +3,17 @@ from __future__ import annotations
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import text
-from sqlalchemy.orm import Session
+from sqlalchemy import select, text
+from sqlalchemy.orm import Session, joinedload
 
 from app.catalog.schemas import (
     NearbyStationItem,
     NearbyStationsQuery,
-    FreshnessStatus,
+    StationDetailResponse,
+    StationPriceItem,
     freshness_status_for,
 )
+from app.models import Station
 
 ROME_TZ = ZoneInfo("Europe/Rome")
 
@@ -118,3 +120,52 @@ class StationCatalogService:
                 )
             )
         return items
+
+    def get_station_detail(self, station_id: int) -> StationDetailResponse | None:
+        now = datetime.now(ROME_TZ)
+        station = (
+            self.db.execute(
+            select(Station)
+            .options(joinedload(Station.current_prices))
+            .where(Station.id == station_id, Station.is_active.is_(True))
+        )
+            .unique()
+            .scalar_one_or_none()
+        )
+        if station is None:
+            return None
+
+        price_rows = sorted(
+            station.current_prices,
+            key=lambda item: (item.fuel_type.value, item.service_mode.value, item.price),
+        )
+
+        prices = [
+            StationPriceItem(
+                fuel_type=row.fuel_type,
+                service_mode=row.service_mode,
+                price=row.price,
+                price_effective_at=row.price_effective_at,
+                source_updated_at=row.source_updated_at,
+                freshness_status=freshness_status_for(row.source_updated_at, now=now),
+            )
+            for row in price_rows
+        ]
+
+        source_updated_at = station.source_updated_at
+        return StationDetailResponse(
+            id=station.id,
+            ministerial_station_id=station.ministerial_station_id,
+            name=station.name,
+            brand=station.brand,
+            address=station.address,
+            comune=station.comune,
+            provincia=station.provincia,
+            postal_code=station.postal_code,
+            is_highway_station=station.is_highway_station,
+            latitude=float(station.latitude),
+            longitude=float(station.longitude),
+            source_updated_at=source_updated_at,
+            freshness_status=freshness_status_for(source_updated_at, now=now),
+            prices=prices,
+        )
