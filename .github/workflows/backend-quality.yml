@@ -1,0 +1,174 @@
+name: Backend Quality
+
+on:
+  pull_request:
+    branches:
+      - dev
+      - main
+    paths:
+      - "backend/**"
+
+permissions:
+  contents: read
+
+jobs:
+  backend-quality:
+    name: Backend tests and pylint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect backend additions and updates
+        id: backend-changes
+        working-directory: .
+        run: |
+          git diff --name-status \
+            "${{ github.event.pull_request.base.sha }}" \
+            "${{ github.event.pull_request.head.sha }}" \
+            > backend-changes.txt
+
+          if awk '
+            $1 ~ /^[AM]/ && $2 ~ /^backend\// { found = 1 }
+            $1 ~ /^R/ && $3 ~ /^backend\// { found = 1 }
+            END { exit found ? 0 : 1 }
+          ' backend-changes.txt; then
+            echo "run_quality=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_quality=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Python
+        if: steps.backend-changes.outputs.run_quality == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Install backend dependencies
+        if: steps.backend-changes.outputs.run_quality == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pylint pytest pytest-asyncio pytest-html
+
+      - name: Prepare report directory
+        if: steps.backend-changes.outputs.run_quality == 'true'
+        run: mkdir -p ../quality-reports
+
+      - name: Run backend tests
+        if: steps.backend-changes.outputs.run_quality == 'true'
+        id: pytest
+        continue-on-error: true
+        run: |
+          pytest tests \
+            --junitxml=../quality-reports/pytest-junit.xml \
+            --html=../quality-reports/pytest-report.html \
+            --self-contained-html
+
+      - name: Run pylint
+        if: steps.backend-changes.outputs.run_quality == 'true'
+        id: pylint
+        continue-on-error: true
+        run: |
+          set +e
+          pylint app tests --output-format=text --fail-under=9.0 --persistent=no \
+            | tee ../quality-reports/pylint.txt
+          pylint_status=${PIPESTATUS[0]}
+
+          python - <<'PY'
+          from datetime import datetime, timezone
+          from html import escape
+          from pathlib import Path
+
+          report_dir = Path("../quality-reports")
+          text_report = report_dir / "pylint.txt"
+          html_report = report_dir / "pylint-report.html"
+          pylint_output = text_report.read_text(encoding="utf-8") if text_report.exists() else ""
+          generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+          html_report.write_text(
+              f"""<!doctype html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1">
+              <title>Pylint Report</title>
+              <style>
+                body {{
+                  margin: 0;
+                  background: #f6f8fa;
+                  color: #1f2328;
+                  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                }}
+                main {{
+                  max-width: 1180px;
+                  margin: 0 auto;
+                  padding: 32px 20px;
+                }}
+                h1 {{
+                  margin: 0 0 8px;
+                  font-size: 28px;
+                }}
+                p {{
+                  margin: 0 0 20px;
+                  color: #57606a;
+                }}
+                pre {{
+                  overflow: auto;
+                  padding: 20px;
+                  border: 1px solid #d0d7de;
+                  border-radius: 6px;
+                  background: #ffffff;
+                  line-height: 1.45;
+                }}
+              </style>
+            </head>
+            <body>
+              <main>
+                <h1>Pylint Report</h1>
+                <p>Generated at {generated_at}</p>
+                <pre>{escape(pylint_output)}</pre>
+              </main>
+            </body>
+          </html>
+          """,
+              encoding="utf-8",
+          )
+          PY
+
+          exit "$pylint_status"
+
+      - name: Publish readable reports
+        if: always() && steps.backend-changes.outputs.run_quality == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-quality-reports
+          path: quality-reports
+          if-no-files-found: error
+
+      - name: Add report links to job summary
+        if: always() && steps.backend-changes.outputs.run_quality == 'true'
+        run: |
+          {
+            echo "## Backend quality reports"
+            echo
+            echo "| Check | Result | Report |"
+            echo "| --- | --- | --- |"
+            echo "| Pytest | ${{ steps.pytest.outcome }} | pytest-report.html |"
+            echo "| Pylint | ${{ steps.pylint.outcome }} | pylint-report.html |"
+            echo
+            echo "Download the \`backend-quality-reports\` artifact from this workflow run to open the HTML reports."
+            echo "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail when quality checks fail
+        if: steps.backend-changes.outputs.run_quality == 'true' && (steps.pytest.outcome == 'failure' || steps.pylint.outcome == 'failure')
+        run: exit 1

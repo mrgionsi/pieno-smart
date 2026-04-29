@@ -15,8 +15,10 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+  "pylint>=3.3.0,<4.0.0",
   "pytest>=8.3.0,<9.0.0",
   "pytest-asyncio>=0.26.0,<1.0.0",
+  "pytest-html>=4.1.0,<5.0.0",
   "ruff>=0.11.0,<1.0.0",
 ]
 
@@ -34,3 +36,21 @@ target-version = "py313"
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.pylint.main]
+py-version = "3.13"
+ignore = [".venv", "__pycache__"]
+persistent = false
+
+[tool.pylint.messages_control]
+disable = [
+  "missing-class-docstring",
+  "missing-function-docstring",
+  "missing-module-docstring",
+]
+
+[tool.pylint.format]
+max-line-length = 100
+
+[tool.pylint.reports]
+fail-under = 9.0
