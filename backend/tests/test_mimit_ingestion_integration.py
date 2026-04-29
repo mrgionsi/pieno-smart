@@ -49,8 +49,16 @@ def test_end_to_end_ingestion_updates_stations_prices_and_price_changes() -> Non
         )
 
         assert first_run.station_rows_seen == 2
+        assert first_run.station_rows_inserted == 2
+        assert first_run.station_rows_updated == 0
+        assert first_run.station_rows_unchanged_skipped == 0
+        assert first_run.station_rows_invalid_skipped == 0
         assert first_run.station_rows_upserted == 2
         assert first_run.price_rows_seen == 3
+        assert first_run.price_rows_inserted == 3
+        assert first_run.price_rows_updated == 0
+        assert first_run.price_rows_unchanged_skipped == 0
+        assert first_run.price_rows_station_missing_skipped == 0
         assert first_run.price_rows_upserted == 3
         assert first_run.price_change_rows_inserted == 0
 
@@ -76,7 +84,11 @@ def test_end_to_end_ingestion_updates_stations_prices_and_price_changes() -> Non
 
         assert second_run.station_rows_seen == 0
         assert second_run.price_rows_seen == 3
-        assert second_run.price_rows_upserted == 3
+        assert second_run.price_rows_inserted == 0
+        assert second_run.price_rows_updated == 2
+        assert second_run.price_rows_unchanged_skipped == 1
+        assert second_run.price_rows_station_missing_skipped == 0
+        assert second_run.price_rows_upserted == 2
         assert second_run.price_change_rows_inserted == 2
 
         updated_benzina_price = db.scalar(
@@ -99,6 +111,18 @@ def test_end_to_end_ingestion_updates_stations_prices_and_price_changes() -> Non
         ).all()
         assert len(sync_runs) == 2
         assert all(run.status == SyncStatus.COMPLETED for run in sync_runs)
+        assert sync_runs[0].station_records_inserted == 2
+        assert sync_runs[0].station_records_updated == 0
+        assert sync_runs[0].station_records_unchanged_skipped == 0
+        assert sync_runs[0].station_records_invalid_skipped == 0
+        assert sync_runs[0].price_records_inserted == 3
+        assert sync_runs[0].price_records_updated == 0
+        assert sync_runs[0].price_records_unchanged_skipped == 0
+        assert sync_runs[0].price_records_station_missing_skipped == 0
+        assert sync_runs[1].price_records_inserted == 0
+        assert sync_runs[1].price_records_updated == 2
+        assert sync_runs[1].price_records_unchanged_skipped == 1
+        assert sync_runs[1].price_records_station_missing_skipped == 0
     finally:
         db.rollback()
         _cleanup_test_data(db)

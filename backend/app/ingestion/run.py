@@ -75,12 +75,16 @@ def main() -> None:
     _log(
         "Ingestion completed",
         stations_seen=counters.station_rows_seen,
-        stations_upserted=counters.station_rows_upserted,
-        stations_skipped=counters.station_rows_skipped,
+        stations_inserted=counters.station_rows_inserted,
+        stations_updated=counters.station_rows_updated,
+        stations_unchanged_skipped=counters.station_rows_unchanged_skipped,
+        stations_invalid_skipped=counters.station_rows_invalid_skipped,
         prices_seen=counters.price_rows_seen,
-        prices_upserted=counters.price_rows_upserted,
+        prices_inserted=counters.price_rows_inserted,
+        prices_updated=counters.price_rows_updated,
+        prices_unchanged_skipped=counters.price_rows_unchanged_skipped,
         price_changes=counters.price_change_rows_inserted,
-        prices_skipped=counters.price_rows_skipped,
+        prices_station_missing_skipped=counters.price_rows_station_missing_skipped,
         elapsed_seconds=f"{perf_counter() - started_at:.2f}",
     )
 
