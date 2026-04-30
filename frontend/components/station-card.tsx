@@ -1,54 +1,69 @@
-import { Link } from "expo-router";
+import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { NearbyStationItem } from "../lib/types";
 
-export function StationCard({ station }: { station: NearbyStationItem }) {
+export function StationCard({
+  station,
+  selected = false,
+  onHoverIn,
+  onPressIn,
+}: {
+  station: NearbyStationItem;
+  selected?: boolean;
+  onHoverIn?: () => void;
+  onPressIn?: () => void;
+}) {
+  const router = useRouter();
+
   return (
-    <Link href={`/stations/${station.id}`} asChild>
-      <Pressable style={styles.card}>
-        <View style={styles.header}>
-          <View style={styles.identity}>
-            <Text style={styles.name}>{station.name ?? "Unnamed station"}</Text>
-            <Text style={styles.meta}>
-              {[station.brand, station.comune, station.provincia].filter(Boolean).join(" · ")}
-            </Text>
-          </View>
-          <View style={styles.badges}>
-            <Text style={styles.distance}>{Math.round(station.distance_meters)} m</Text>
-            <Text style={styles.freshness}>{station.freshness_status}</Text>
-          </View>
+    <Pressable
+      style={[styles.card, selected && styles.cardSelected]}
+      onHoverIn={onHoverIn}
+      onPressIn={onPressIn}
+      onPress={() => router.push(`/stations/${station.id}`)}
+    >
+      <View style={styles.header}>
+        <View style={styles.identity}>
+          <Text style={styles.name}>{station.name ?? "Unnamed station"}</Text>
+          <Text style={styles.meta}>
+            {[station.brand, station.comune, station.provincia].filter(Boolean).join(" · ")}
+          </Text>
         </View>
-
-        <Text style={styles.address}>{station.address ?? "No address available"}</Text>
-
-        <View style={styles.priceRow}>
-          <View>
-            <Text style={styles.priceLabel}>
-              {[station.selected_fuel_type, station.selected_service_mode].filter(Boolean).join(" · ") || "No price"}
-            </Text>
-            <Text style={styles.priceValue}>
-              {station.current_price ? `€${station.current_price}` : "Price unavailable"}
-            </Text>
-          </View>
-          {station.score !== null && station.score !== undefined ? (
-            <View style={styles.scorePill}>
-              <Text style={styles.scoreText}>{station.score.toFixed(1)}</Text>
-            </View>
-          ) : null}
+        <View style={styles.badges}>
+          <Text style={styles.distance}>{Math.round(station.distance_meters)} m</Text>
+          <Text style={styles.freshness}>{station.freshness_status}</Text>
         </View>
+      </View>
 
-        {station.match_reasons.length > 0 ? (
-          <View style={styles.reasons}>
-            {station.match_reasons.map((reason) => (
-              <Text key={reason} style={styles.reason}>
-                {reason}
-              </Text>
-            ))}
+      <Text style={styles.address}>{station.address ?? "No address available"}</Text>
+
+      <View style={styles.priceRow}>
+        <View>
+          <Text style={styles.priceLabel}>
+            {[station.selected_fuel_type, station.selected_service_mode].filter(Boolean).join(" · ") || "No price"}
+          </Text>
+          <Text style={styles.priceValue}>
+            {station.current_price ? `€${station.current_price}` : "Price unavailable"}
+          </Text>
+        </View>
+        {station.score !== null && station.score !== undefined ? (
+          <View style={styles.scorePill}>
+            <Text style={styles.scoreText}>{station.score.toFixed(1)}</Text>
           </View>
         ) : null}
-      </Pressable>
-    </Link>
+      </View>
+
+      {station.match_reasons.length > 0 ? (
+        <View style={styles.reasons}>
+          {station.match_reasons.map((reason) => (
+            <Text key={reason} style={styles.reason}>
+              {reason}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+    </Pressable>
   );
 }
 
@@ -60,6 +75,14 @@ const styles = StyleSheet.create({
     gap: 12,
     borderWidth: 1,
     borderColor: "#e8e0d0",
+  },
+  cardSelected: {
+    borderColor: "#be522f",
+    shadowColor: "#73301a",
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
   },
   header: {
     flexDirection: "row",

@@ -8,11 +8,13 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 
 import { searchNearby, getVehicleProfiles } from "../lib/api";
 import type { FuelType, NearbySort, ServiceMode, VehicleProfile, NearbyStationItem } from "../lib/types";
+import { NearbyMap } from "./nearby-map";
 import { StationCard } from "./station-card";
 
 const SORT_OPTIONS: NearbySort[] = ["distance", "price", "convenience"];
@@ -29,8 +31,10 @@ export function NearbyExplorer() {
   const [vehicleProfileId, setVehicleProfileId] = useState("");
   const [profiles, setProfiles] = useState<VehicleProfile[]>([]);
   const [results, setResults] = useState<NearbyStationItem[]>([]);
+  const [selectedStationId, setSelectedStationId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { width } = useWindowDimensions();
 
   useEffect(() => {
     void getVehicleProfiles()
@@ -51,6 +55,7 @@ export function NearbyExplorer() {
     () => profiles.find((profile) => profile.id === vehicleProfileId) ?? null,
     [profiles, vehicleProfileId],
   );
+  const isWideLayout = width >= 1040;
 
   async function runSearch() {
     setLoading(true);
@@ -67,8 +72,15 @@ export function NearbyExplorer() {
         limit: 20,
       });
       setResults(response.items);
+      setSelectedStationId((current) => {
+        if (current && response.items.some((station) => station.id === current)) {
+          return current;
+        }
+        return response.items[0]?.id ?? null;
+      });
     } catch (fetchError) {
       setResults([]);
+      setSelectedStationId(null);
       setError(fetchError instanceof Error ? fetchError.message : "Search failed");
     } finally {
       setLoading(false);
@@ -176,10 +188,31 @@ export function NearbyExplorer() {
           <Text style={styles.empty}>Run a search to see nearby stations and convenience suggestions.</Text>
         ) : null}
 
-        <View style={styles.resultsList}>
-          {results.map((station) => (
-            <StationCard key={station.id} station={station} />
-          ))}
+        <View style={[styles.discoveryLayout, isWideLayout && styles.discoveryLayoutWide]}>
+          <View style={[styles.mapPanel, isWideLayout && styles.mapPanelWide]}>
+            <NearbyMap
+              stations={results}
+              selectedStationId={selectedStationId}
+              center={{ lat: Number(lat), lon: Number(lon) }}
+              radiusMeters={Number(radius) || 5000}
+              onSelectStation={setSelectedStationId}
+            />
+          </View>
+
+          <View style={[styles.listPanel, isWideLayout && styles.listPanelWide]}>
+            <Text style={styles.listLabel}>Stations in the selected area</Text>
+            <View style={styles.resultsList}>
+              {results.map((station) => (
+                <StationCard
+                  key={station.id}
+                  station={station}
+                  selected={station.id === selectedStationId}
+                  onHoverIn={() => setSelectedStationId(station.id)}
+                  onPressIn={() => setSelectedStationId(station.id)}
+                />
+              ))}
+            </View>
+          </View>
         </View>
       </View>
     </ScrollView>
@@ -317,6 +350,34 @@ const styles = StyleSheet.create({
   },
   resultsPanel: {
     gap: 12,
+  },
+  discoveryLayout: {
+    gap: 14,
+  },
+  discoveryLayoutWide: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  mapPanel: {
+    gap: 12,
+  },
+  mapPanelWide: {
+    flex: 1.05,
+    position: "sticky" as never,
+    top: 16 as never,
+  },
+  listPanel: {
+    gap: 12,
+  },
+  listPanelWide: {
+    flex: 0.95,
+  },
+  listLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    color: "#5a6a61",
   },
   resultsHeader: {
     flexDirection: "row",
