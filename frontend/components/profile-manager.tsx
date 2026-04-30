@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -85,7 +84,7 @@ export function ProfileManager() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <View style={styles.container}>
       <View style={styles.formPanel}>
         <Text style={styles.heading}>Vehicle profiles</Text>
         <Text style={styles.subheading}>
@@ -156,7 +155,7 @@ export function ProfileManager() {
           ))}
         </View>
       </View>
-    </ScrollView>
+    </View>
   );
 }
 

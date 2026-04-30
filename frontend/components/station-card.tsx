@@ -1,4 +1,3 @@
-import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { NearbyStationItem } from "../lib/types";
@@ -8,20 +7,20 @@ export function StationCard({
   selected = false,
   onHoverIn,
   onPressIn,
+  onOpen,
 }: {
   station: NearbyStationItem;
   selected?: boolean;
   onHoverIn?: () => void;
   onPressIn?: () => void;
+  onOpen?: () => void;
 }) {
-  const router = useRouter();
-
   return (
     <Pressable
       style={[styles.card, selected && styles.cardSelected]}
       onHoverIn={onHoverIn}
       onPressIn={onPressIn}
-      onPress={() => router.push(`/stations/${station.id}`)}
+      onPress={onOpen}
     >
       <View style={styles.header}>
         <View style={styles.identity}>
@@ -70,9 +69,9 @@ export function StationCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: "#fffdf8",
-    borderRadius: 22,
-    padding: 18,
-    gap: 12,
+    borderRadius: 18,
+    padding: 14,
+    gap: 10,
     borderWidth: 1,
     borderColor: "#e8e0d0",
   },
@@ -94,12 +93,12 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   name: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: "700",
     color: "#16241d",
   },
   meta: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#53655b",
   },
   badges: {
@@ -107,20 +106,20 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   distance: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
     color: "#2a5a47",
   },
   freshness: {
-    fontSize: 11,
+    fontSize: 10,
     textTransform: "uppercase",
-    letterSpacing: 0.8,
+    letterSpacing: 0.7,
     color: "#8a5d21",
   },
   address: {
     color: "#3a463f",
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 17,
   },
   priceRow: {
     flexDirection: "row",
@@ -128,25 +127,25 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   priceLabel: {
-    fontSize: 12,
+    fontSize: 10,
     color: "#69746e",
     textTransform: "uppercase",
-    letterSpacing: 0.8,
+    letterSpacing: 0.7,
   },
   priceValue: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "800",
     color: "#0f231c",
   },
   scorePill: {
     backgroundColor: "#163a2b",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 999,
   },
   scoreText: {
     color: "#f9f6ec",
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "800",
   },
   reasons: {
@@ -155,12 +154,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   reason: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     borderRadius: 999,
     backgroundColor: "#eef5ef",
     color: "#244634",
-    fontSize: 12,
+    fontSize: 11,
     overflow: "hidden",
   },
 });

@@ -1,5 +1,5 @@
 import { PropsWithChildren } from "react";
-import { SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
 export function AppShell({
   title,
@@ -8,14 +8,14 @@ export function AppShell({
 }: PropsWithChildren<{ title: string; subtitle: string }>) {
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.page}>
+      <ScrollView contentContainerStyle={styles.page}>
         <View style={styles.hero}>
           <Text style={styles.eyebrow}>PienoSmart</Text>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.subtitle}>{subtitle}</Text>
         </View>
         <View style={styles.content}>{children}</View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -26,37 +26,37 @@ const styles = StyleSheet.create({
     backgroundColor: "#f6f3ea",
   },
   page: {
-    flex: 1,
     paddingHorizontal: 16,
-    paddingVertical: 20,
-    gap: 18,
+    paddingTop: 16,
+    paddingBottom: 20,
+    gap: 14,
   },
   hero: {
-    padding: 20,
-    borderRadius: 28,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    borderRadius: 24,
     backgroundColor: "#163a2b",
-    gap: 8,
+    gap: 6,
   },
   eyebrow: {
     color: "#d6e8de",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
-    letterSpacing: 1.2,
+    letterSpacing: 1,
     textTransform: "uppercase",
   },
   title: {
     color: "#fffaf1",
-    fontSize: 30,
+    fontSize: 24,
     fontWeight: "800",
-    lineHeight: 36,
+    lineHeight: 29,
   },
   subtitle: {
     color: "#d8eadf",
-    fontSize: 15,
-    lineHeight: 21,
+    fontSize: 13,
+    lineHeight: 18,
   },
   content: {
-    flex: 1,
-    gap: 16,
+    gap: 12,
   },
 });

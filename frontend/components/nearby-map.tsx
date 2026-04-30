@@ -9,7 +9,10 @@ export function NearbyMap({
   selectedStationId: number | null;
   center: { lat: number; lon: number };
   radiusMeters: number;
+  currentUserLocation: { lat: number; lon: number } | null;
   onSelectStation: (stationId: number) => void;
+  onOpenStation: (stationId: number) => void;
+  onViewportChange: (viewport: { lat: number; lon: number; radiusMeters: number }) => void;
 }) {
   return (
     <View style={styles.placeholder}>

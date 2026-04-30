@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import { AppShell } from "../../components/shell";
 import { getStationDetail } from "../../lib/api";
@@ -36,7 +36,7 @@ export default function StationDetailScreen() {
       title="Station detail"
       subtitle="See all current prices and freshness data before you decide where to stop."
     >
-      <ScrollView contentContainerStyle={styles.container}>
+      <View style={styles.container}>
         {loading ? <ActivityIndicator color="#163a2b" /> : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {detail ? (
@@ -62,7 +62,7 @@ export default function StationDetailScreen() {
             </View>
           </View>
         ) : null}
-      </ScrollView>
+      </View>
     </AppShell>
   );
 }
