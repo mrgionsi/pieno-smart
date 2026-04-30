@@ -21,6 +21,14 @@ class Settings(BaseSettings):
     dev_current_user_email: str = "demo@pienosmart.local"
     dev_current_user_display_name: str = "Demo User"
     dev_current_user_subject: str = "dev-local-user"
+    cors_allowed_origins: str = (
+        "http://127.0.0.1:8081,"
+        "http://localhost:8081,"
+        "http://127.0.0.1:19006,"
+        "http://localhost:19006,"
+        "http://127.0.0.1:3000,"
+        "http://localhost:3000"
+    )
     mimit_dataset_page_url: str = (
         "https://www.mimit.gov.it/it/open-data/elenco-dataset/"
         "carburanti-prezzi-praticati-e-anagrafica-degli-impianti"
