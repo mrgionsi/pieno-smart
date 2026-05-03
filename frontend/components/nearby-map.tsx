@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 
-import type { NearbyStationItem } from "../lib/types";
+import type { NearbyStationItem, StationDetail } from "../lib/types";
 
 export function NearbyMap({
   stations,
@@ -12,6 +12,9 @@ export function NearbyMap({
   currentUserLocation: { lat: number; lon: number } | null;
   onSelectStation: (stationId: number) => void;
   onOpenStation: (stationId: number) => void;
+  onHoverStation: (stationId: number | null) => void;
+  onEnsureStationPreview: (stationId: number) => void;
+  stationPreviews: Record<number, StationDetail | undefined>;
   onViewportChange: (viewport: { lat: number; lon: number; radiusMeters: number }) => void;
 }) {
   return (

@@ -1,6 +1,7 @@
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import type { StationDetail } from "../lib/types";
+import { colors, radius, spacing, typography } from "../theme";
 
 export function StationDetailModal({
   visible,
@@ -65,76 +66,75 @@ export function StationDetailModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(16, 24, 20, 0.45)",
+    backgroundColor: colors.overlay,
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    padding: spacing.xl,
   },
   sheet: {
     width: "100%",
     maxWidth: 720,
     maxHeight: "88%",
-    backgroundColor: "#f8f4ea",
-    borderRadius: 24,
+    backgroundColor: colors.surfaceWarm,
+    borderRadius: radius.panel,
     borderWidth: 1,
-    borderColor: "#ddd4c5",
+    borderColor: colors.borderWarm,
     overflow: "hidden",
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    paddingHorizontal: 18,
-    paddingTop: 18,
-    paddingBottom: 12,
-    backgroundColor: "#163a2b",
-    gap: 12,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.primaryDark,
+    gap: spacing.md,
   },
   headerCopy: {
     flex: 1,
     gap: 4,
   },
   eyebrow: {
-    color: "#c9ddd0",
-    fontSize: 11,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
+    color: "#D9E4F1",
+    ...typography.eyebrow,
   },
   title: {
-    color: "#fffaf1",
+    color: colors.inverseText,
     fontSize: 22,
     fontWeight: "800",
   },
   closeButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: "#f6f3ea",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   closeLabel: {
-    color: "#173528",
+    color: colors.primary,
     fontWeight: "700",
-    fontSize: 12,
+    ...typography.caption,
   },
   content: {
-    padding: 18,
+    padding: spacing.xl,
   },
   card: {
-    backgroundColor: "#fffdf8",
-    borderRadius: 20,
-    padding: 16,
-    gap: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radius.panel,
+    padding: spacing.lg,
+    gap: spacing.md,
     borderWidth: 1,
-    borderColor: "#e8dfcf",
+    borderColor: colors.borderWarm,
   },
   meta: {
-    color: "#57665f",
+    color: colors.textMuted,
     fontSize: 14,
     lineHeight: 20,
   },
   status: {
-    color: "#2e5b48",
+    color: colors.primary,
     fontWeight: "700",
   },
   priceList: {
@@ -146,22 +146,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: "#ece4d7",
+    borderTopColor: colors.borderWarm,
   },
   priceKey: {
     fontWeight: "700",
-    color: "#243730",
+    color: colors.text,
   },
   timestamp: {
     fontSize: 12,
-    color: "#6f786f",
+    color: colors.textSoft,
   },
   priceValue: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#12241c",
+    color: colors.text,
   },
   error: {
-    color: "#9d2d22",
+    color: colors.danger,
   },
 });

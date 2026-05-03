@@ -5,7 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import maplibre from "maplibre-gl";
 import { StyleSheet, Text, View } from "react-native";
 
-import type { FuelType, NearbyStationItem } from "../lib/types";
+import type { FuelType, NearbyStationItem, StationDetail } from "../lib/types";
+import { colors, radius, spacing, typography } from "../theme";
 
 type NearbyMapProps = {
   stations: NearbyStationItem[];
@@ -15,6 +16,9 @@ type NearbyMapProps = {
   currentUserLocation: { lat: number; lon: number } | null;
   onSelectStation: (stationId: number) => void;
   onOpenStation: (stationId: number) => void;
+  onHoverStation: (stationId: number | null) => void;
+  onEnsureStationPreview: (stationId: number) => void;
+  stationPreviews: Record<number, StationDetail | undefined>;
   onViewportChange: (viewport: { lat: number; lon: number; radiusMeters: number }) => void;
 };
 
@@ -45,6 +49,9 @@ export function NearbyMap({
   currentUserLocation,
   onSelectStation,
   onOpenStation,
+  onHoverStation,
+  onEnsureStationPreview,
+  stationPreviews,
   onViewportChange,
 }: NearbyMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -52,6 +59,8 @@ export function NearbyMap({
   const mapLoadedRef = useRef(false);
   const markersRef = useRef<Map<number, any>>(new Map());
   const currentLocationMarkerRef = useRef<any>(null);
+  const popupRef = useRef<any>(null);
+  const hoveredStationIdRef = useRef<number | null>(null);
   const suppressViewportEventRef = useRef(false);
   const lastViewportSignatureRef = useRef<string>("");
   const [mapReady, setMapReady] = useState(false);
@@ -120,6 +129,10 @@ export function NearbyMap({
         currentLocationMarkerRef.current.remove();
         currentLocationMarkerRef.current = null;
       }
+      if (popupRef.current) {
+        popupRef.current.remove();
+        popupRef.current = null;
+      }
       lastViewportSignatureRef.current = "";
       if (mapRef.current) {
         mapLoadedRef.current = false;
@@ -163,6 +176,25 @@ export function NearbyMap({
         onSelectStation(station.id);
         onOpenStation(station.id);
       };
+      element.onmouseenter = () => {
+        hoveredStationIdRef.current = station.id;
+        onHoverStation(station.id);
+        onEnsureStationPreview(station.id);
+        showStationPopup({
+          map,
+          popupRef,
+          station,
+          detail: stationPreviews[station.id],
+        });
+      };
+      element.onmouseleave = () => {
+        hoveredStationIdRef.current = null;
+        onHoverStation(null);
+        if (popupRef.current) {
+          popupRef.current.remove();
+          popupRef.current = null;
+        }
+      };
 
       const currentMarker = markersRef.current.get(station.id);
       if (currentMarker) {
@@ -179,7 +211,15 @@ export function NearbyMap({
       }
     }
 
-  }, [stations, selectedStationId, onSelectStation]);
+  }, [
+    stations,
+    selectedStationId,
+    onSelectStation,
+    onOpenStation,
+    onHoverStation,
+    onEnsureStationPreview,
+    stationPreviews,
+  ]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -205,6 +245,24 @@ export function NearbyMap({
     }
     currentLocationMarkerRef.current = marker;
   }, [currentUserLocation, mapReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const hoveredStationId = hoveredStationIdRef.current;
+    if (!map || !hoveredStationId) {
+      return;
+    }
+    const station = stations.find((item) => item.id === hoveredStationId);
+    if (!station) {
+      return;
+    }
+    showStationPopup({
+      map,
+      popupRef,
+      station,
+      detail: stationPreviews[hoveredStationId],
+    });
+  }, [stationPreviews, stations]);
 
   return (
     <View style={styles.wrapper}>
@@ -330,6 +388,93 @@ function createCurrentLocationElement() {
   return element;
 }
 
+function showStationPopup({
+  map,
+  popupRef,
+  station,
+  detail,
+}: {
+  map: any;
+  popupRef: React.MutableRefObject<any>;
+  station: NearbyStationItem;
+  detail: StationDetail | undefined;
+}) {
+  if (popupRef.current) {
+    popupRef.current.remove();
+  }
+
+  const popupElement = document.createElement("div");
+  popupElement.style.display = "flex";
+  popupElement.style.flexDirection = "column";
+  popupElement.style.gap = "5px";
+  popupElement.style.minWidth = "180px";
+
+  const title = document.createElement("div");
+  title.style.fontWeight = "800";
+  title.style.fontSize = "12px";
+  title.style.color = "#173528";
+  title.textContent = station.name ?? "Unnamed station";
+  popupElement.appendChild(title);
+
+  const priceGrid = document.createElement("div");
+  priceGrid.style.display = "grid";
+  priceGrid.style.gridTemplateColumns = "1fr auto";
+  priceGrid.style.gap = "3px 8px";
+
+  if (detail?.prices?.length) {
+    detail.prices.forEach((price) => {
+      const label = document.createElement("div");
+      label.style.fontSize = "10px";
+      label.style.color = "#4b5c54";
+      label.textContent = `${shortFuelLabel(price.fuel_type)} · ${price.service_mode}`;
+
+      const value = document.createElement("div");
+      value.style.fontSize = "10px";
+      value.style.fontWeight = "700";
+      value.style.color = "#173528";
+      value.textContent = `€${price.price}`;
+
+      priceGrid.appendChild(label);
+      priceGrid.appendChild(value);
+    });
+  } else {
+    const loading = document.createElement("div");
+    loading.style.fontSize = "10px";
+    loading.style.color = "#6f786f";
+    loading.textContent = "Loading prices…";
+    priceGrid.appendChild(loading);
+  }
+
+  popupElement.appendChild(priceGrid);
+  popupRef.current = new maplibre.Popup({
+    closeButton: false,
+    closeOnClick: false,
+    offset: 16,
+  })
+    .setLngLat([station.longitude, station.latitude])
+    .setDOMContent(popupElement)
+    .addTo(map);
+}
+
+function shortFuelLabel(fuelType: FuelType) {
+  switch (fuelType) {
+    case "benzina":
+      return "Benzina";
+    case "diesel":
+      return "Diesel";
+    case "gpl":
+      return "GPL";
+    case "metano":
+      return "Metano";
+    case "gnl":
+      return "GNL";
+    case "hvo":
+      return "HVO";
+    default:
+      return fuelType;
+  }
+}
+
 function fuelMarkerMeta(fuelType: FuelType | null) {
   switch (fuelType) {
     case "benzina":
@@ -359,12 +504,12 @@ const mapContainerStyle: CSSProperties = {
 
 const styles = StyleSheet.create({
   wrapper: {
-    gap: 10,
+    gap: spacing.sm,
   },
   legend: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: spacing.sm,
     alignItems: "center",
   },
   legendItem: {
@@ -373,8 +518,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   legendText: {
-    fontSize: 11,
-    color: "#4b5c54",
+    color: colors.textMuted,
+    ...typography.caption,
     fontWeight: "600",
   },
   userLegendDot: {
@@ -393,28 +538,30 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: 12,
+    gap: spacing.md,
     alignItems: "flex-start",
     flexWrap: "wrap",
   },
   title: {
+    color: colors.text,
     fontSize: 16,
     fontWeight: "800",
-    color: "#18261f",
   },
   subtitle: {
     marginTop: 4,
-    color: "#5d6d65",
-    fontSize: 12,
+    color: colors.textMuted,
+    ...typography.caption,
   },
   distanceBadge: {
     paddingHorizontal: 10,
     paddingVertical: 7,
-    borderRadius: 999,
-    backgroundColor: "#fff4ea",
-    color: "#8c4327",
+    borderRadius: radius.chip,
+    backgroundColor: colors.surfaceMuted,
+    color: colors.primary,
     fontWeight: "700",
     fontSize: 12,
     overflow: "hidden",
+    borderWidth: 1,
+    borderColor: colors.border,
   },
 });

@@ -1,17 +1,20 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { NearbyStationItem } from "../lib/types";
+import { colors, elevation, radius, spacing, typography } from "../theme";
 
 export function StationCard({
   station,
   selected = false,
   onHoverIn,
+  onHoverOut,
   onPressIn,
   onOpen,
 }: {
   station: NearbyStationItem;
   selected?: boolean;
   onHoverIn?: () => void;
+  onHoverOut?: () => void;
   onPressIn?: () => void;
   onOpen?: () => void;
 }) {
@@ -19,6 +22,7 @@ export function StationCard({
     <Pressable
       style={[styles.card, selected && styles.cardSelected]}
       onHoverIn={onHoverIn}
+      onHoverOut={onHoverOut}
       onPressIn={onPressIn}
       onPress={onOpen}
     >
@@ -68,58 +72,55 @@ export function StationCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#fffdf8",
-    borderRadius: 18,
-    padding: 14,
-    gap: 10,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: 11,
+    gap: 7,
     borderWidth: 1,
-    borderColor: "#e8e0d0",
+    borderColor: colors.borderWarm,
   },
   cardSelected: {
-    borderColor: "#be522f",
-    shadowColor: "#73301a",
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 4,
+    borderColor: colors.selectionBorder,
+    backgroundColor: colors.selection,
+    ...elevation.selected,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: 12,
+    gap: 10,
   },
   identity: {
     flex: 1,
     gap: 4,
   },
   name: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
-    color: "#16241d",
+    color: colors.text,
   },
   meta: {
-    fontSize: 11,
-    color: "#53655b",
+    color: colors.textMuted,
+    ...typography.caption,
   },
   badges: {
     alignItems: "flex-end",
     gap: 6,
   },
   distance: {
-    fontSize: 11,
+    color: colors.accent,
+    ...typography.caption,
     fontWeight: "700",
-    color: "#2a5a47",
   },
   freshness: {
     fontSize: 10,
     textTransform: "uppercase",
     letterSpacing: 0.7,
-    color: "#8a5d21",
+    color: colors.warning,
   },
   address: {
-    color: "#3a463f",
+    color: colors.textMuted,
     fontSize: 12,
-    lineHeight: 17,
+    lineHeight: 16,
   },
   priceRow: {
     flexDirection: "row",
@@ -128,24 +129,24 @@ const styles = StyleSheet.create({
   },
   priceLabel: {
     fontSize: 10,
-    color: "#69746e",
+    color: colors.textSoft,
     textTransform: "uppercase",
     letterSpacing: 0.7,
   },
   priceValue: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "800",
-    color: "#0f231c",
+    color: colors.text,
   },
   scorePill: {
-    backgroundColor: "#163a2b",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.chip,
   },
   scoreText: {
-    color: "#f9f6ec",
-    fontSize: 14,
+    color: colors.inverseText,
+    fontSize: 13,
     fontWeight: "800",
   },
   reasons: {
@@ -154,12 +155,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   reason: {
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 999,
-    backgroundColor: "#eef5ef",
-    color: "#244634",
-    fontSize: 11,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 5,
+    borderRadius: radius.chip,
+    backgroundColor: colors.surfaceMuted,
+    color: colors.accent,
+    fontSize: 10,
     overflow: "hidden",
   },
 });

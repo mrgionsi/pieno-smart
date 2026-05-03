@@ -34,6 +34,7 @@ This folder contains the agreed MVP documentation set for PienoSmart.
 - [Next Implementation Guide](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/next-implementation-guide.md)
 - [Recommendation Score V1](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/recommendation-score-v1.md)
 - [User And Vehicle Profile Foundation](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/user-and-vehicle-profile-foundation.md)
+- [Frontend UX And Visual Design](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/frontend-ux-and-visual-design.md)
 - [Implementation Backlog](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/implementation-backlog.md)
 - [Ingestion Runbook](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/ingestion-runbook.md)
 - [GitHub Project Setup](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/github-project-setup.md)

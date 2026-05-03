@@ -12,6 +12,7 @@ import {
 
 import { createVehicleProfile, deleteVehicleProfile, getVehicleProfiles } from "../lib/api";
 import type { FuelType, ServiceMode, VehicleProfile } from "../lib/types";
+import { colors, radius, spacing, typography } from "../theme";
 
 const FUEL_OPTIONS: FuelType[] = ["benzina", "diesel", "gpl", "metano", "gnl", "hvo"];
 const SERVICE_OPTIONS: ServiceMode[] = ["self", "servito", "unknown"];
@@ -194,24 +195,23 @@ function Chip({
 
 const styles = StyleSheet.create({
   container: {
-    gap: 16,
+    gap: spacing.lg,
     paddingBottom: 28,
   },
   formPanel: {
-    backgroundColor: "#fffdf8",
-    borderRadius: 24,
-    padding: 18,
-    gap: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radius.panel,
+    padding: spacing.xl,
+    gap: spacing.md,
     borderWidth: 1,
-    borderColor: "#e8dfcf",
+    borderColor: colors.borderWarm,
   },
   heading: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#15231c",
+    color: colors.text,
+    ...typography.sectionTitle,
   },
   subheading: {
-    color: "#57665f",
+    color: colors.textMuted,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -219,19 +219,16 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   label: {
-    fontSize: 12,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-    color: "#55665d",
+    color: colors.textMuted,
+    ...typography.eyebrow,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#d8cebd",
-    borderRadius: 16,
+    borderColor: colors.border,
+    borderRadius: radius.md,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: "#fffaf2",
+    backgroundColor: colors.surfaceWarm,
   },
   chipRow: {
     flexDirection: "row",
@@ -241,57 +238,60 @@ const styles = StyleSheet.create({
   chip: {
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: "#efe9dc",
+    borderRadius: radius.chip,
+    backgroundColor: colors.surfaceMuted,
   },
   chipActive: {
-    backgroundColor: "#163a2b",
+    backgroundColor: colors.primary,
   },
   chipText: {
-    color: "#2c3f35",
+    color: colors.text,
     fontWeight: "600",
   },
   chipTextActive: {
-    color: "#fff8ee",
+    color: colors.inverseText,
   },
   toggle: {
     paddingHorizontal: 14,
     paddingVertical: 12,
-    borderRadius: 16,
-    backgroundColor: "#f0e7d8",
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   toggleActive: {
-    backgroundColor: "#e6f2e8",
+    backgroundColor: colors.selection,
+    borderColor: colors.selectionBorder,
   },
   toggleText: {
-    color: "#573f2a",
+    color: colors.text,
     fontWeight: "700",
   },
   toggleTextActive: {
-    color: "#205035",
+    color: colors.accent,
   },
   cta: {
     marginTop: 6,
-    backgroundColor: "#be522f",
+    backgroundColor: colors.primary,
     paddingVertical: 16,
-    borderRadius: 18,
+    borderRadius: radius.md,
     alignItems: "center",
   },
   ctaDisabled: {
     opacity: 0.55,
   },
   ctaText: {
-    color: "#fffaf0",
+    color: colors.inverseText,
     fontSize: 15,
     fontWeight: "800",
   },
   error: {
-    color: "#9d2d22",
+    color: colors.danger,
     fontSize: 13,
     lineHeight: 18,
   },
   listPanel: {
-    gap: 12,
+    gap: spacing.md,
   },
   listHeader: {
     flexDirection: "row",
@@ -299,23 +299,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   listTitle: {
+    color: colors.text,
     fontSize: 20,
     fontWeight: "800",
-    color: "#19251f",
   },
   empty: {
-    color: "#627168",
+    color: colors.textMuted,
     fontSize: 14,
   },
   list: {
-    gap: 12,
+    gap: spacing.md,
   },
   profileCard: {
-    backgroundColor: "#fffdf8",
-    borderRadius: 22,
-    padding: 18,
+    backgroundColor: colors.surface,
+    borderRadius: radius.panel,
+    padding: spacing.lg,
     borderWidth: 1,
-    borderColor: "#e8dfcf",
+    borderColor: colors.borderWarm,
     gap: 10,
   },
   profileMeta: {
@@ -324,10 +324,10 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#15231c",
+    color: colors.text,
   },
   profileDetail: {
-    color: "#56665e",
+    color: colors.textMuted,
     fontSize: 13,
   },
   profileActions: {
@@ -338,9 +338,9 @@ const styles = StyleSheet.create({
   defaultBadge: {
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: "#163a2b",
-    color: "#fff6ec",
+    borderRadius: radius.chip,
+    backgroundColor: colors.primary,
+    color: colors.inverseText,
     overflow: "hidden",
     fontSize: 12,
     fontWeight: "700",
@@ -348,11 +348,13 @@ const styles = StyleSheet.create({
   deleteButton: {
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: "#fbe8e1",
+    borderRadius: radius.md,
+    backgroundColor: "#F8ECE9",
+    borderWidth: 1,
+    borderColor: "#E8C9C0",
   },
   deleteText: {
-    color: "#a53620",
+    color: colors.danger,
     fontWeight: "700",
   },
 });

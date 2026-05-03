@@ -22,6 +22,7 @@ import type {
   PlaceSuggestion,
   StationDetail,
 } from "../lib/types";
+import { colors, radius, spacing, typography } from "../theme";
 import { NearbyMap } from "./nearby-map";
 import { StationCard } from "./station-card";
 import { StationDetailModal } from "./station-detail-modal";
@@ -47,12 +48,15 @@ export function NearbyExplorer() {
   const [profiles, setProfiles] = useState<VehicleProfile[]>([]);
   const [results, setResults] = useState<NearbyStationItem[]>([]);
   const [selectedStationId, setSelectedStationId] = useState<number | null>(null);
+  const [hoveredStationId, setHoveredStationId] = useState<number | null>(null);
   const [openedStationId, setOpenedStationId] = useState<number | null>(null);
   const [stationDetail, setStationDetail] = useState<StationDetail | null>(null);
+  const [stationPreviewCache, setStationPreviewCache] = useState<Record<number, StationDetail | undefined>>({});
   const [stationDetailLoading, setStationDetailLoading] = useState(false);
   const [stationDetailError, setStationDetailError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const { width } = useWindowDimensions();
 
   useEffect(() => {
@@ -74,7 +78,9 @@ export function NearbyExplorer() {
     () => profiles.find((profile) => profile.id === vehicleProfileId) ?? null,
     [profiles, vehicleProfileId],
   );
+  const highlightedStationId = hoveredStationId ?? selectedStationId;
   const isWideLayout = width >= 1040;
+  const isToolbarLayout = width >= 860;
 
   useEffect(() => {
     const normalizedQuery = locationQuery.trim();
@@ -127,6 +133,15 @@ export function NearbyExplorer() {
         limit: 20,
       });
       setResults(response.items);
+      setStationPreviewCache((current) => {
+        const next: Record<number, StationDetail | undefined> = {};
+        for (const station of response.items) {
+          if (current[station.id]) {
+            next[station.id] = current[station.id];
+          }
+        }
+        return next;
+      });
       setSelectedStationId((current) => {
         if (current && response.items.some((station) => station.id === current)) {
           return current;
@@ -139,6 +154,23 @@ export function NearbyExplorer() {
       setError(fetchError instanceof Error ? fetchError.message : "Search failed");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function ensureStationPreview(stationId: number) {
+    if (stationPreviewCache[stationId]) {
+      return;
+    }
+    try {
+      const detail = await getStationDetail(stationId);
+      setStationPreviewCache((current) => {
+        if (current[stationId]) {
+          return current;
+        }
+        return { ...current, [stationId]: detail };
+      });
+    } catch {
+      setStationPreviewCache((current) => ({ ...current, [stationId]: undefined }));
     }
   }
 
@@ -230,33 +262,18 @@ export function NearbyExplorer() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.panel}>
-        <Text style={styles.panelTitle}>Nearby search</Text>
-        <Text style={styles.panelSubtitle}>
-          Start from your current position or search for an Italian town, then refine the nearby fuel recommendations.
-        </Text>
-
-        <View style={styles.locationRow}>
-          <Pressable
-            style={[styles.locationButton, locatingUser && styles.locationButtonDisabled]}
-            onPress={() => void useBrowserLocation()}
-            disabled={locatingUser}
-          >
-            <Text style={styles.locationButtonText}>
-              {locatingUser ? "Locating…" : "Use my location"}
-            </Text>
-          </Pressable>
-          <View style={styles.locationField}>
-            <Text style={styles.label}>Search town</Text>
+      <View style={styles.controlsPanel}>
+        <View style={[styles.controlsTopRow, isToolbarLayout && styles.controlsTopRowWide]}>
+          <View style={[styles.locationFieldCompact, isToolbarLayout && styles.locationFieldCompactWide]}>
             <TextInput
               value={locationQuery}
               onChangeText={setLocationQuery}
               style={styles.input}
-              placeholder="Recale, CE"
+              placeholder="Search town"
               placeholderTextColor="#8b8f88"
             />
             {selectedLocationLabel ? (
-              <Text style={styles.locationHint}>Searching around: {selectedLocationLabel}</Text>
+              <Text style={styles.locationHint}>Area: {selectedLocationLabel}</Text>
             ) : null}
             {searchingPlaces ? <Text style={styles.searchingHint}>Searching places…</Text> : null}
             {placeSuggestions.length > 0 ? (
@@ -273,79 +290,90 @@ export function NearbyExplorer() {
               </View>
             ) : null}
           </View>
+
+          <Pressable
+            style={[styles.secondaryButton, locatingUser && styles.locationButtonDisabled]}
+            onPress={() => void useBrowserLocation()}
+            disabled={locatingUser}
+          >
+            <Text style={styles.secondaryButtonText}>{locatingUser ? "Locating…" : "My location"}</Text>
+          </Pressable>
+
+          <Pressable style={styles.primaryButton} onPress={() => void runSearch()}>
+            <Text style={styles.primaryButtonText}>Refresh</Text>
+          </Pressable>
         </View>
 
-        <Text style={styles.viewportHint}>
-          Move or zoom the map to change the search area.
-        </Text>
+        <View style={[styles.quickFiltersRow, isToolbarLayout && styles.quickFiltersRowWide]}>
+          <CompactFilter label="Sort" wide={isToolbarLayout}>
+            {SORT_OPTIONS.map((option) => (
+              <Chip key={option} label={option} active={sort === option} onPress={() => setSort(option)} />
+            ))}
+          </CompactFilter>
 
-        <FilterRow label="Sort">
-          {SORT_OPTIONS.map((option) => (
-            <Chip
-              key={option}
-              label={option}
-              active={sort === option}
-              stretch
-              onPress={() => setSort(option)}
-            />
-          ))}
-        </FilterRow>
-
-        <FilterRow label="Vehicle profile">
-          <Chip
-            label="manual filters"
-            active={!vehicleProfileId}
-            stretch
-            onPress={() => setVehicleProfileId("")}
-          />
-          {profiles.map((profile) => (
-            <Chip
-              key={profile.id}
-              label={profile.name}
-              active={vehicleProfileId === profile.id}
-              stretch
-              onPress={() => setVehicleProfileId(profile.id)}
-            />
-          ))}
-        </FilterRow>
-
-        {vehicleProfileId && selectedProfile ? (
-          <View style={styles.profileHint}>
-            <Text style={styles.profileHintText}>
-              Using profile defaults: {selectedProfile.fuel_type} · {selectedProfile.preferred_service_mode}
-            </Text>
-          </View>
-        ) : (
-          <>
-            <FilterRow label="Fuel type">
+          {!vehicleProfileId ? (
+            <CompactFilter label="Fuel" wide={isToolbarLayout}>
               {FUEL_OPTIONS.map((option) => (
+                <Chip key={option} label={option} active={fuelType === option} onPress={() => setFuelType(option)} />
+              ))}
+            </CompactFilter>
+          ) : null}
+
+          <Pressable
+            style={styles.moreFiltersButton}
+            onPress={() => setShowAdvancedFilters((value) => !value)}
+          >
+            <Text style={styles.moreFiltersButtonText}>
+              {showAdvancedFilters ? "Hide filters" : "More filters"}
+            </Text>
+          </Pressable>
+        </View>
+
+        {showAdvancedFilters ? (
+          <View style={styles.advancedFilters}>
+            <FilterRow label="Vehicle profile">
+              <Chip
+                label="manual filters"
+                active={!vehicleProfileId}
+                stretch
+                onPress={() => setVehicleProfileId("")}
+              />
+              {profiles.map((profile) => (
                 <Chip
-                  key={option}
-                  label={option}
-                  active={fuelType === option}
+                  key={profile.id}
+                  label={profile.name}
+                  active={vehicleProfileId === profile.id}
                   stretch
-                  onPress={() => setFuelType(option)}
+                  onPress={() => setVehicleProfileId(profile.id)}
                 />
               ))}
             </FilterRow>
 
-            <FilterRow label="Service mode">
-              {SERVICE_OPTIONS.map((option) => (
-                <Chip
-                  key={option || "any"}
-                  label={option || "any"}
-                  active={serviceMode === option}
-                  stretch
-                  onPress={() => setServiceMode(option)}
-                />
-              ))}
-            </FilterRow>
-          </>
-        )}
+            {vehicleProfileId && selectedProfile ? (
+              <View style={styles.profileHint}>
+                <Text style={styles.profileHintText}>
+                  Using profile defaults: {selectedProfile.fuel_type} · {selectedProfile.preferred_service_mode}
+                </Text>
+              </View>
+            ) : (
+              <FilterRow label="Service mode">
+                {SERVICE_OPTIONS.map((option) => (
+                  <Chip
+                    key={option || "any"}
+                    label={option || "any"}
+                    stretch
+                    active={serviceMode === option}
+                    onPress={() => setServiceMode(option)}
+                  />
+                ))}
+              </FilterRow>
+            )}
 
-        <Pressable style={styles.cta} onPress={() => void runSearch()}>
-          <Text style={styles.ctaText}>Search nearby stations</Text>
-        </Pressable>
+            {!vehicleProfileId ? (
+              <Text style={styles.viewportHint}>Move or zoom the map to change the search area.</Text>
+            ) : null}
+          </View>
+        ) : null}
 
         {canUseProfile ? null : (
           <Text style={styles.helper}>No saved profiles yet. You can still search anonymously with manual fuel filters.</Text>
@@ -354,8 +382,8 @@ export function NearbyExplorer() {
 
       <View style={styles.resultsPanel}>
         <View style={styles.resultsHeader}>
-          <Text style={styles.resultsTitle}>Results</Text>
-          {loading ? <ActivityIndicator color="#163a2b" /> : null}
+          <Text style={styles.resultsTitle}>Nearby stations</Text>
+          {loading ? <ActivityIndicator color={colors.primary} /> : null}
         </View>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -368,12 +396,15 @@ export function NearbyExplorer() {
           <View style={[styles.mapPanel, isWideLayout && styles.mapPanelWide]}>
             <NearbyMap
               stations={results}
-              selectedStationId={selectedStationId}
+              selectedStationId={highlightedStationId}
               center={{ lat: Number(lat), lon: Number(lon) }}
               radiusMeters={radiusMeters}
               currentUserLocation={currentUserLocation}
               onSelectStation={setSelectedStationId}
               onOpenStation={(stationId) => void openStationDetails(stationId)}
+              onHoverStation={setHoveredStationId}
+              onEnsureStationPreview={(stationId) => void ensureStationPreview(stationId)}
+              stationPreviews={stationPreviewCache}
               onViewportChange={(viewport) => void handleViewportChange(viewport)}
             />
           </View>
@@ -385,8 +416,12 @@ export function NearbyExplorer() {
                 <StationCard
                   key={station.id}
                   station={station}
-                  selected={station.id === selectedStationId}
-                  onHoverIn={() => setSelectedStationId(station.id)}
+                  selected={station.id === highlightedStationId}
+                  onHoverIn={() => {
+                    setHoveredStationId(station.id);
+                    void ensureStationPreview(station.id);
+                  }}
+                  onHoverOut={() => setHoveredStationId(null)}
                   onPressIn={() => setSelectedStationId(station.id)}
                   onOpen={() => void openStationDetails(station.id)}
                 />
@@ -445,104 +480,154 @@ function FilterRow({
   );
 }
 
+function CompactFilter({
+  label,
+  children,
+  wide = false,
+}: {
+  label: string;
+  children: React.ReactNode;
+  wide?: boolean;
+}) {
+  return (
+    <View style={[styles.compactFilter, wide && styles.compactFilterWide]}>
+      <Text style={styles.compactFilterLabel}>{label}</Text>
+      <View style={styles.compactFilterOptions}>{children}</View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
-    gap: 12,
+    gap: spacing.md,
     paddingBottom: 28,
   },
-  panel: {
-    backgroundColor: "#fffdf8",
-    borderRadius: 20,
-    padding: 14,
-    gap: 10,
+  controlsPanel: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.panel,
+    padding: spacing.lg,
+    gap: spacing.sm,
     borderWidth: 1,
-    borderColor: "#e8dfcf",
+    borderColor: colors.borderWarm,
   },
-  panelTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#15231c",
+  controlsTopRow: {
+    gap: spacing.sm,
   },
-  panelSubtitle: {
-    fontSize: 12,
-    lineHeight: 17,
-    color: "#57665f",
+  controlsTopRowWide: {
+    flexDirection: "row",
+    alignItems: "flex-start",
   },
-  locationRow: {
-    gap: 12,
+  locationFieldCompact: {
+    gap: spacing.xs,
+    flex: 1,
   },
-  locationButton: {
-    width: "100%",
+  locationFieldCompactWide: {
+    minWidth: 320,
+  },
+  primaryButton: {
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 999,
-    backgroundColor: "#163a2b",
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+  },
+  secondaryButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   locationButtonDisabled: {
     opacity: 0.7,
   },
-  locationButtonText: {
-    color: "#fff8ee",
+  primaryButtonText: {
+    color: colors.inverseText,
     fontWeight: "800",
-    fontSize: 14,
+    fontSize: 13,
   },
-  locationField: {
-    gap: 6,
+  secondaryButtonText: {
+    color: colors.primary,
+    fontWeight: "700",
+    fontSize: 13,
   },
   inputRow: {
     width: "100%",
   },
   label: {
-    fontSize: 11,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.7,
-    color: "#55665d",
+    color: colors.textMuted,
+    ...typography.eyebrow,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#d8cebd",
-    borderRadius: 14,
+    borderColor: colors.border,
+    borderRadius: radius.md,
     paddingHorizontal: 14,
     paddingVertical: 11,
-    backgroundColor: "#fffaf2",
+    backgroundColor: colors.surfaceWarm,
     width: "100%",
     fontSize: 14,
+    color: colors.text,
   },
   locationHint: {
-    color: "#1f5137",
+    color: colors.accent,
     fontSize: 12,
     fontWeight: "600",
   },
   searchingHint: {
-    color: "#6d6f65",
+    color: colors.textSoft,
     fontSize: 12,
   },
   viewportHint: {
-    color: "#51665b",
-    fontSize: 12,
-    lineHeight: 17,
+    color: colors.textMuted,
+    ...typography.caption,
   },
   suggestionsPanel: {
     marginTop: 4,
     borderWidth: 1,
-    borderColor: "#ded4c4",
-    borderRadius: 16,
+    borderColor: colors.borderWarm,
+    borderRadius: radius.md,
     overflow: "hidden",
-    backgroundColor: "#fffdf8",
+    backgroundColor: colors.surface,
   },
   suggestionItem: {
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#ece4d7",
+    borderBottomColor: colors.borderWarm,
   },
   suggestionLabel: {
-    color: "#20352c",
+    color: colors.text,
     fontWeight: "600",
   },
   chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  quickFiltersRow: {
+    gap: spacing.sm,
+  },
+  quickFiltersRowWide: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    flexWrap: "wrap",
+  },
+  compactFilter: {
+    gap: 6,
+  },
+  compactFilterWide: {
+    flex: 1,
+    minWidth: 220,
+  },
+  compactFilterLabel: {
+    color: colors.textMuted,
+    ...typography.eyebrow,
+  },
+  compactFilterOptions: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
@@ -555,11 +640,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   filterRowLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.7,
-    color: "#55665d",
+    color: colors.textMuted,
+    ...typography.eyebrow,
   },
   filterRowOptions: {
     width: "100%",
@@ -571,10 +653,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: "#efe9dc",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: radius.chip,
+    backgroundColor: colors.surfaceMuted,
   },
   chipStretch: {
     flexGrow: 1,
@@ -582,42 +664,49 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   chipActive: {
-    backgroundColor: "#163a2b",
+    backgroundColor: colors.primary,
   },
   chipText: {
-    color: "#2c3f35",
+    color: colors.text,
     fontWeight: "600",
-    fontSize: 12,
+    fontSize: 11,
   },
   chipTextActive: {
-    color: "#fff8ee",
+    color: colors.inverseText,
   },
   profileHint: {
     padding: 10,
-    borderRadius: 14,
-    backgroundColor: "#edf7ef",
+    borderRadius: radius.md,
+    backgroundColor: colors.selection,
+    borderWidth: 1,
+    borderColor: colors.selectionBorder,
   },
   profileHintText: {
-    color: "#1f5137",
+    color: colors.accent,
     fontSize: 12,
     fontWeight: "600",
   },
-  cta: {
-    marginTop: 6,
-    backgroundColor: "#be522f",
-    paddingVertical: 14,
-    borderRadius: 16,
-    alignItems: "center",
-  },
-  ctaText: {
-    color: "#fffaf0",
-    fontSize: 14,
-    fontWeight: "800",
-  },
   helper: {
-    color: "#6d6f65",
+    color: colors.textSoft,
     fontSize: 12,
     lineHeight: 17,
+  },
+  advancedFilters: {
+    gap: spacing.sm,
+  },
+  moreFiltersButton: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  moreFiltersButtonText: {
+    color: colors.primary,
+    fontWeight: "700",
+    fontSize: 12,
   },
   resultsPanel: {
     gap: 10,
@@ -642,11 +731,8 @@ const styles = StyleSheet.create({
     flex: 0.3,
   },
   listLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.7,
-    color: "#5a6a61",
+    color: colors.textMuted,
+    ...typography.eyebrow,
   },
   resultsHeader: {
     flexDirection: "row",
@@ -654,16 +740,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   resultsTitle: {
+    color: colors.text,
     fontSize: 17,
     fontWeight: "800",
-    color: "#19251f",
   },
   empty: {
-    color: "#627168",
+    color: colors.textMuted,
     fontSize: 12,
   },
   error: {
-    color: "#9d2d22",
+    color: colors.danger,
     fontSize: 12,
     lineHeight: 17,
   },
