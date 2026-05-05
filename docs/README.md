@@ -25,22 +25,22 @@ This folder contains the agreed MVP documentation set for PienoSmart.
 
 ## Documents
 
-- [MVP Scope And Release Plan](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/mvp-scope-and-release-plan.md)
-- [Solution Architecture](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/solution-architecture.md)
-- [Tech Stack And Framework Choice](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/tech-stack-and-framework-choice.md)
-- [Domain Data Contract](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/domain-data-contract.md)
-- [API Contract Outline](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/api-contract-outline.md)
-- [Backend Ingestion And Data Flow](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/backend-ingestion-and-data-flow.md)
-- [Next Implementation Guide](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/next-implementation-guide.md)
-- [Recommendation Score V1](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/recommendation-score-v1.md)
-- [User And Vehicle Profile Foundation](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/user-and-vehicle-profile-foundation.md)
-- [Frontend UX And Visual Design](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/frontend-ux-and-visual-design.md)
-- [Implementation Backlog](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/implementation-backlog.md)
-- [Ingestion Runbook](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/ingestion-runbook.md)
-- [GitHub Project Setup](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/github-project-setup.md)
-- [ADRs](/Users/gionsi/Documents/personal_projects/pieno_smart/docs/adr)
+- [MVP Scope And Release Plan](./mvp-scope-and-release-plan.md)
+- [Solution Architecture](./solution-architecture.md)
+- [Tech Stack And Framework Choice](./tech-stack-and-framework-choice.md)
+- [Domain Data Contract](./domain-data-contract.md)
+- [API Contract Outline](./api-contract-outline.md)
+- [Backend Ingestion And Data Flow](./backend-ingestion-and-data-flow.md)
+- [Next Implementation Guide](./next-implementation-guide.md)
+- [Recommendation Score V1](./recommendation-score-v1.md)
+- [User And Vehicle Profile Foundation](./user-and-vehicle-profile-foundation.md)
+- [Frontend UX And Visual Design](./frontend-ux-and-visual-design.md)
+- [Implementation Backlog](./implementation-backlog.md)
+- [Ingestion Runbook](./ingestion-runbook.md)
+- [GitHub Project Setup](./github-project-setup.md)
+- [ADRs](./adr)
 
 ## Existing Inputs
 
-- [Operational PRD And Schema](/Users/gionsi/Documents/personal_projects/pieno_smart/fuel-prd-postgres-postgis.md)
-- [MVP Delivery Blueprint](/Users/gionsi/Documents/personal_projects/pieno_smart/pienosmart-mvp-delivery-blueprint.md)
+- [Operational PRD And Schema](../fuel-prd-postgres-postgis.md)
+- [MVP Delivery Blueprint](../pienosmart-mvp-delivery-blueprint.md)
