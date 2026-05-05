@@ -1,16 +1,17 @@
 import { Link, usePathname } from "expo-router";
-import { PropsWithChildren } from "react";
+import { PropsWithChildren, useState } from "react";
 import { Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { colors, radius, spacing, typography } from "../theme";
+import { colors, elevation, radius, spacing, typography } from "../theme";
 
 const logo = require("../assets/pienosmart_logo.png");
+const favicon = require("../favicon.png");
 
 const NAV_ITEMS = [
-  { href: "/", label: "Nearby" },
-  { href: "/profiles", label: "Profiles" },
-  { href: "/trips", label: "Trips" },
-  { href: "/favorites", label: "Favorites" },
+  { href: "/", label: "Nearby", icon: "⌖" },
+  { href: "/profiles", label: "Profiles", icon: "◫" },
+  { href: "/trips", label: "Trips", icon: "↗" },
+  { href: "/favorites", label: "Favorites", icon: "♡" },
 ] as const;
 
 export function AppShell({
@@ -26,41 +27,52 @@ export function AppShell({
   scrollEnabled?: boolean;
 }>) {
   const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const currentSection = pathname === "/" ? "/" : `/${pathname.split("/").filter(Boolean)[0] ?? ""}`;
   const headerStyle = StyleSheet.flatten([styles.headerBar, headerVariant === "compact" && styles.headerBarCompact]);
   const titleStyle = StyleSheet.flatten([styles.title, headerVariant === "compact" && styles.titleCompact]);
   const subtitleStyle = StyleSheet.flatten([styles.subtitle, headerVariant === "compact" && styles.subtitleCompact]);
   const shellContent = (
     <>
       <View style={headerStyle}>
-        <View style={styles.brandRow}>
-          <Image source={logo} style={styles.logo} resizeMode="contain" />
+        <View style={styles.topRow}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={menuOpen ? "Close menu" : "Open menu"}
+            style={({ pressed }) => [styles.menuToggle, pressed && styles.menuTogglePressed]}
+            onPress={() => setMenuOpen((value) => !value)}
+          >
+            <View style={styles.menuIcon}>
+              <View style={styles.menuIconLine} />
+              <View style={styles.menuIconLine} />
+              <View style={styles.menuIconLine} />
+            </View>
+          </Pressable>
 
-          <View style={styles.brandBlock}>
-            <Text style={styles.eyebrow}>PienoSmart</Text>
-
-            <Text style={titleStyle}>{title}</Text>
-
-            <Text style={subtitleStyle}>{subtitle}</Text>
+          <View style={styles.headerActionBadge}>
+            <Image source={favicon} style={styles.headerActionImage} resizeMode="contain" />
           </View>
         </View>
 
-        <View style={styles.menuRow}>
-          {NAV_ITEMS.map((item) => {
-            const isActive = pathname === item.href;
-            const menuItemStyle = StyleSheet.flatten([styles.menuItem, isActive && styles.menuItemActive]);
-            const menuItemTextStyle = StyleSheet.flatten([styles.menuItemText, isActive && styles.menuItemTextActive]);
 
-            return (
-              <Link key={item.href} href={item.href} asChild>
-                <Pressable style={menuItemStyle}>
-                  <Text style={menuItemTextStyle}>{item.label}</Text>
-                </Pressable>
-              </Link>
-            );
-          })}
+      </View>
+      <View style={styles.heroRow}>
+        <View style={styles.logoPanel}>
+          <Image source={logo} style={styles.logo} resizeMode="contain" />
+        </View>
+
+        <View style={styles.brandBlock}>
+          <Text style={styles.eyebrow}>PienoSmart</Text>
+
+          <Text style={titleStyle}>{title}</Text>
+
+          <Text style={subtitleStyle}>{subtitle}</Text>
+
+          <Text style={styles.valueLine}>
+            Better than a plain fuel list: compare stations using distance, freshness, convenience, and trip context.
+          </Text>
         </View>
       </View>
-
       <View style={styles.content}>{children}</View>
     </>
   );
@@ -72,6 +84,43 @@ export function AppShell({
       ) : (
         <View style={styles.page}>{shellContent}</View>
       )}
+      {menuOpen ? (
+        <View style={styles.menuOverlay}>
+          <View style={styles.menuOverlayHeader}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close menu"
+              style={({ pressed }) => [styles.menuToggle, pressed && styles.menuTogglePressed]}
+              onPress={() => setMenuOpen(false)}
+            >
+              <View style={styles.menuIcon}>
+                <View style={styles.menuIconLine} />
+                <View style={styles.menuIconLine} />
+                <View style={styles.menuIconLine} />
+              </View>
+            </Pressable>
+          </View>
+
+          <View style={styles.menuOverlayContent}>
+            {NAV_ITEMS.map((item) => {
+              const isActive = currentSection === item.href;
+              const menuItemStyle = StyleSheet.flatten([styles.menuItem, isActive && styles.menuItemActive]);
+              const menuItemTextStyle = StyleSheet.flatten([styles.menuItemText, isActive && styles.menuItemTextActive]);
+
+              return (
+                <Link key={item.href} href={item.href} asChild>
+                  <Pressable style={menuItemStyle} onPress={() => setMenuOpen(false)}>
+                    <View style={styles.menuItemInner}>
+                      <Text style={[styles.menuItemIcon, isActive && styles.menuItemIconActive]}>{item.icon}</Text>
+                      <Text style={menuItemTextStyle}>{item.label}</Text>
+                    </View>
+                  </Pressable>
+                </Link>
+              );
+            })}
+          </View>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -96,27 +145,50 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   headerBarCompact: {
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
   },
-  brandRow: {
+  topRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md,
+    justifyContent: "space-between",
   },
-  logo: {
-    width: 52,
-    height: 52,
+  heroRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: spacing.lg,
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    ...elevation.focus,
+  },
+  logoPanel: {
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surfaceWarm,
+    borderColor: colors.borderWarm,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: spacing.md,
   },
   brandBlock: {
-    gap: 2,
+    gap: spacing.xs,
     flex: 1,
+    justifyContent: "center",
+  },
+  logo: {
+    width: 108,
+    height: 108,
   },
   eyebrow: {
-    color: "#D9E4F1",
+    color: colors.primary,
     ...typography.eyebrow,
   },
   title: {
-    color: colors.inverseText,
+    color: colors.text,
     ...typography.pageTitle,
   },
   titleCompact: {
@@ -124,38 +196,114 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   subtitle: {
-    color: "#D4E0EC",
+    color: colors.textMuted,
     ...typography.body,
   },
   subtitleCompact: {
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 14,
+    lineHeight: 19,
   },
-  menuRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
+  valueLine: {
     marginTop: spacing.sm,
+    color: colors.secondary,
+    fontSize: 13,
+    lineHeight: 18,
   },
-  menuItem: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
+  menuToggle: {
+    width: 38,
+    height: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: "rgba(217, 228, 241, 0.2)",
+    backgroundColor: "rgba(255,255,255,0.05)",
+    ...elevation.focus,
+  },
+  menuTogglePressed: {
+    opacity: 0.82,
+  },
+  menuIcon: {
+    gap: 3,
+  },
+  menuIconLine: {
+    width: 16,
+    height: 2,
+    borderRadius: 999,
+    backgroundColor: "#D9E4F1",
+  },
+  headerActionBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 999,
     borderWidth: 1,
     borderColor: "rgba(217, 228, 241, 0.18)",
-    backgroundColor: "rgba(255,255,255,0.05)",
+    backgroundColor: "rgba(255,255,255,0.06)",
+    alignItems: "center",
+    justifyContent: "center",
+    ...elevation.focus,
+  },
+  headerActionImage: {
+    width: 22,
+    height: 22,
+  },
+  menuOverlay: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 50,
+    backgroundColor: "rgba(16, 43, 70, 0.96)",
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
+  },
+  menuOverlayHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  menuOverlayContent: {
+    flex: 1,
+    justifyContent: "center",
+    gap: spacing.md,
+  },
+  menuItem: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: radius.sm,
+    borderWidth: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(217, 228, 241, 0.12)",
+    backgroundColor: "transparent",
+  },
+  menuItemInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
   },
   menuItemActive: {
-    backgroundColor: colors.surface,
-    borderColor: colors.surface,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderBottomColor: colors.accentWarm,
+  },
+  menuItemIcon: {
+    width: 24,
+    color: "#AFC7DE",
+    fontSize: 22,
+    lineHeight: 24,
+    textAlign: "center",
+  },
+  menuItemIconActive: {
+    color: colors.accentWarm,
   },
   menuItemText: {
-    color: "#D9E4F1",
-    ...typography.caption,
+    color: colors.inverseText,
+    fontSize: 24,
+    lineHeight: 30,
     fontWeight: "700",
   },
   menuItemTextActive: {
-    color: colors.primary,
+    color: colors.accentWarm,
   },
   content: {
     gap: spacing.md,

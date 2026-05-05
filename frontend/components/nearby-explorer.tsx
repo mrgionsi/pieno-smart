@@ -416,9 +416,9 @@ export function NearbyExplorer() {
           </View>
         ) : null}
 
-        {canUseProfile ? null : (
+        {/*       {canUseProfile ? null : (
           <Text style={styles.helper}>No saved profiles yet. You can still search anonymously with manual fuel filters.</Text>
-        )}
+        )} */}
       </View>
 
       <View style={styles.resultsPanel}>
