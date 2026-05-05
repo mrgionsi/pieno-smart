@@ -10,7 +10,8 @@
       "typedRoutes": true
     },
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "favicon": "./favicon.png"
     }
   }
 }
