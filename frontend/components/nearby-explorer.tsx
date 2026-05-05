@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -58,6 +58,8 @@ export function NearbyExplorer() {
   const [error, setError] = useState<string | null>(null);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const { width } = useWindowDimensions();
+  const searchRequestIdRef = useRef(0);
+  const stationDetailRequestIdRef = useRef(0);
 
   useEffect(() => {
     void getVehicleProfiles()
@@ -118,6 +120,7 @@ export function NearbyExplorer() {
     const effectiveLat = nextLocation?.lat ?? lat;
     const effectiveLon = nextLocation?.lon ?? lon;
     const effectiveRadiusMeters = nextLocation?.radiusMeters ?? radiusMeters;
+    const requestId = ++searchRequestIdRef.current;
 
     setLoading(true);
     setError(null);
@@ -132,6 +135,9 @@ export function NearbyExplorer() {
         sort,
         limit: 20,
       });
+      if (requestId !== searchRequestIdRef.current) {
+        return;
+      }
       setResults(response.items);
       setStationPreviewCache((current) => {
         const next: Record<number, StationDetail | undefined> = {};
@@ -149,11 +155,16 @@ export function NearbyExplorer() {
         return null;
       });
     } catch (fetchError) {
+      if (requestId !== searchRequestIdRef.current) {
+        return;
+      }
       setResults([]);
       setSelectedStationId(null);
       setError(fetchError instanceof Error ? fetchError.message : "Search failed");
     } finally {
-      setLoading(false);
+      if (requestId === searchRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }
 
@@ -200,6 +211,7 @@ export function NearbyExplorer() {
   }
 
   async function openStationDetails(stationId: number) {
+    const requestId = ++stationDetailRequestIdRef.current;
     setOpenedStationId(stationId);
     setSelectedStationId(stationId);
     setStationDetailLoading(true);
@@ -207,11 +219,40 @@ export function NearbyExplorer() {
     setStationDetail(null);
     try {
       const detail = await getStationDetail(stationId);
-      setStationDetail(detail);
+      if (stationDetailRequestIdRef.current === requestId) {
+        setStationDetail(detail);
+      }
     } catch (fetchError) {
-      setStationDetailError(fetchError instanceof Error ? fetchError.message : "Unable to load station");
+      if (stationDetailRequestIdRef.current === requestId) {
+        setStationDetailError(fetchError instanceof Error ? fetchError.message : "Unable to load station");
+      }
     } finally {
-      setStationDetailLoading(false);
+      if (stationDetailRequestIdRef.current === requestId) {
+        setStationDetailLoading(false);
+      }
+    }
+  }
+
+  async function resolveQueryAndSearch() {
+    const normalizedQuery = locationQuery.trim();
+    if (!normalizedQuery || normalizedQuery === selectedLocationLabel) {
+      await runSearch();
+      return;
+    }
+
+    setSearchingPlaces(true);
+    setError(null);
+    try {
+      const suggestions = await searchItalianPlaces(normalizedQuery);
+      if (!suggestions.length) {
+        setError("Select a suggested place before refreshing the map.");
+        return;
+      }
+      await applyPlaceSuggestion(suggestions[0]);
+    } catch (lookupError) {
+      setError(lookupError instanceof Error ? lookupError.message : "Unable to resolve the typed location");
+    } finally {
+      setSearchingPlaces(false);
     }
   }
 
@@ -299,7 +340,7 @@ export function NearbyExplorer() {
             <Text style={styles.secondaryButtonText}>{locatingUser ? "Locating…" : "My location"}</Text>
           </Pressable>
 
-          <Pressable style={styles.primaryButton} onPress={() => void runSearch()}>
+          <Pressable style={styles.primaryButton} onPress={() => void resolveQueryAndSearch()}>
             <Text style={styles.primaryButtonText}>Refresh</Text>
           </Pressable>
         </View>
@@ -437,6 +478,7 @@ export function NearbyExplorer() {
         loading={stationDetailLoading}
         error={stationDetailError}
         onClose={() => {
+          stationDetailRequestIdRef.current += 1;
           setOpenedStationId(null);
           setStationDetail(null);
           setStationDetailError(null);

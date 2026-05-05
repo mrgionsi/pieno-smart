@@ -141,7 +141,7 @@ export function NearbyMap({
         mapRef.current = null;
       }
     };
-  }, [center.lat, center.lon, radiusMeters]);
+  }, []);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -214,6 +214,7 @@ export function NearbyMap({
   }, [
     stations,
     selectedStationId,
+    mapReady,
     onSelectStation,
     onOpenStation,
     onHoverStation,
@@ -421,7 +422,13 @@ function showStationPopup({
   priceGrid.style.gridTemplateColumns = "1fr auto";
   priceGrid.style.gap = "3px 8px";
 
-  if (detail?.prices?.length) {
+  if (detail?.prices == null) {
+    const loading = document.createElement("div");
+    loading.style.fontSize = "10px";
+    loading.style.color = "#6f786f";
+    loading.textContent = "Loading prices…";
+    priceGrid.appendChild(loading);
+  } else if (detail.prices.length > 0) {
     detail.prices.forEach((price) => {
       const label = document.createElement("div");
       label.style.fontSize = "10px";
@@ -438,11 +445,11 @@ function showStationPopup({
       priceGrid.appendChild(value);
     });
   } else {
-    const loading = document.createElement("div");
-    loading.style.fontSize = "10px";
-    loading.style.color = "#6f786f";
-    loading.textContent = "Loading prices…";
-    priceGrid.appendChild(loading);
+    const empty = document.createElement("div");
+    empty.style.fontSize = "10px";
+    empty.style.color = "#6f786f";
+    empty.textContent = "No prices available";
+    priceGrid.appendChild(empty);
   }
 
   popupElement.appendChild(priceGrid);

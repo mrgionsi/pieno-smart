@@ -17,27 +17,33 @@ export function AppShell({
   title,
   subtitle,
   headerVariant = "hero",
+  scrollEnabled = true,
   children,
-}: PropsWithChildren<{ title: string; subtitle: string; headerVariant?: "hero" | "compact" }>) {
+}: PropsWithChildren<{
+  title: string;
+  subtitle: string;
+  headerVariant?: "hero" | "compact";
+  scrollEnabled?: boolean;
+}>) {
   const pathname = usePathname();
+  const Container = scrollEnabled ? ScrollView : View;
+  const containerProps = scrollEnabled ? { contentContainerStyle: styles.page } : { style: styles.page };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page}>
-        <View style={StyleSheet.flatten([styles.headerBar, headerVariant === "compact" && styles.headerBarCompact])}>
+      <Container {...containerProps}>
+        <View style={[styles.headerBar, headerVariant === "compact" && styles.headerBarCompact]}>
           <View style={styles.brandRow}>
             <Image source={logo} style={styles.logo} resizeMode="contain" />
 
             <View style={styles.brandBlock}>
               <Text style={styles.eyebrow}>PienoSmart</Text>
 
-              <Text style={StyleSheet.flatten([styles.title, headerVariant === "compact" && styles.titleCompact])}>
+              <Text style={[styles.title, headerVariant === "compact" && styles.titleCompact]}>
                 {title}
               </Text>
 
-              <Text
-                style={StyleSheet.flatten([styles.subtitle, headerVariant === "compact" && styles.subtitleCompact])}
-              >
+              <Text style={[styles.subtitle, headerVariant === "compact" && styles.subtitleCompact]}>
                 {subtitle}
               </Text>
             </View>
@@ -49,8 +55,8 @@ export function AppShell({
 
               return (
                 <Link key={item.href} href={item.href} asChild>
-                  <Pressable style={StyleSheet.flatten([styles.menuItem, isActive && styles.menuItemActive])}>
-                    <Text style={StyleSheet.flatten([styles.menuItemText, isActive && styles.menuItemTextActive])}>
+                  <Pressable style={[styles.menuItem, isActive && styles.menuItemActive]}>
+                    <Text style={[styles.menuItemText, isActive && styles.menuItemTextActive]}>
                       {item.label}
                     </Text>
                   </Pressable>
@@ -61,7 +67,7 @@ export function AppShell({
         </View>
 
         <View style={styles.content}>{children}</View>
-      </ScrollView>
+      </Container>
     </SafeAreaView>
   );
 }

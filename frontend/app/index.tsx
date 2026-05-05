@@ -11,6 +11,7 @@ export default function HomeScreen() {
       title="Best refueling decision, not just the cheapest station"
       subtitle="Use nearby search now on the web, then reuse the same codebase for iPhone and Android later."
       headerVariant="compact"
+      scrollEnabled={false}
     >
       <View style={styles.navRow}>
         <Link href="/profiles" asChild>
