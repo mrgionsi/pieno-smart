@@ -17,6 +17,8 @@ export const colors = {
   success: "#2E7D5B",
   warning: "#A06A2C",
   danger: "#A23A3A",
+  dangerSurface: "#F8ECE9",
+  dangerBorder: "#E8C9C0",
   overlay: "rgba(16, 29, 46, 0.42)",
   selection: "#EEF5FA",
   selectionBorder: "#2F7A73",

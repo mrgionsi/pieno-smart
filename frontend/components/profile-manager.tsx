@@ -130,7 +130,7 @@ export function ProfileManager() {
       <View style={styles.listPanel}>
         <View style={styles.listHeader}>
           <Text style={styles.listTitle}>Saved profiles</Text>
-          {loading ? <ActivityIndicator color="#163a2b" /> : null}
+          {loading ? <ActivityIndicator color={colors.primary} /> : null}
         </View>
 
         {profiles.length === 0 && !loading ? (
@@ -349,9 +349,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: radius.md,
-    backgroundColor: "#F8ECE9",
+    backgroundColor: colors.dangerSurface,
     borderWidth: 1,
-    borderColor: "#E8C9C0",
+    borderColor: colors.dangerBorder,
   },
   deleteText: {
     color: colors.danger,

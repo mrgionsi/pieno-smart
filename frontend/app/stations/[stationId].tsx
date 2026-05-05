@@ -5,6 +5,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { AppShell } from "../../components/shell";
 import { getStationDetail } from "../../lib/api";
 import type { StationDetail } from "../../lib/types";
+import { colors, radius, spacing, typography } from "../../theme";
 
 export default function StationDetailScreen() {
   const { stationId } = useLocalSearchParams<{ stationId: string | string[] }>();
@@ -37,7 +38,7 @@ export default function StationDetailScreen() {
       subtitle="See all current prices and freshness data before you decide where to stop."
     >
       <View style={styles.container}>
-        {loading ? <ActivityIndicator color="#163a2b" /> : null}
+        {loading ? <ActivityIndicator color={colors.primary} /> : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {detail ? (
           <View style={styles.card}>
@@ -72,25 +73,24 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
   },
   card: {
-    backgroundColor: "#fffdf8",
-    borderRadius: 24,
-    padding: 18,
+    backgroundColor: colors.surfaceWarm,
+    borderRadius: radius.panel,
+    padding: spacing.lg,
     gap: 12,
     borderWidth: 1,
-    borderColor: "#e8dfcf",
+    borderColor: colors.borderWarm,
   },
   name: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#15231c",
+    color: colors.text,
+    ...typography.pageTitle,
   },
   meta: {
-    color: "#57665f",
+    color: colors.textMuted,
     fontSize: 14,
     lineHeight: 20,
   },
   status: {
-    color: "#2e5b48",
+    color: colors.primary,
     fontWeight: "700",
   },
   priceList: {
@@ -102,22 +102,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: "#ece4d7",
+    borderTopColor: colors.borderWarm,
   },
   priceKey: {
     fontWeight: "700",
-    color: "#243730",
+    color: colors.text,
   },
   timestamp: {
     fontSize: 12,
-    color: "#6f786f",
+    color: colors.textSoft,
   },
   priceValue: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#12241c",
+    color: colors.primaryDark,
   },
   error: {
-    color: "#9d2d22",
+    color: colors.danger,
   },
 });
