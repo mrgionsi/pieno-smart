@@ -94,3 +94,13 @@ export type CurrentUser = {
   is_active: boolean;
   default_vehicle_profile_id: string | null;
 };
+
+export type PlaceSuggestion = {
+  id: string;
+  label: string;
+  city: string;
+  province: string | null;
+  region: string | null;
+  latitude: number;
+  longitude: number;
+};

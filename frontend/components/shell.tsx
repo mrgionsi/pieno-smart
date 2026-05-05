@@ -1,21 +1,73 @@
+import { Link, usePathname } from "expo-router";
 import { PropsWithChildren } from "react";
-import { SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+
+import { colors, radius, spacing, typography } from "../theme";
+
+const logo = require("../assets/pienosmart_logo.png");
+
+const NAV_ITEMS = [
+  { href: "/", label: "Nearby" },
+  { href: "/profiles", label: "Profiles" },
+  { href: "/trips", label: "Trips" },
+  { href: "/favorites", label: "Favorites" },
+] as const;
 
 export function AppShell({
   title,
   subtitle,
+  headerVariant = "hero",
+  scrollEnabled = true,
   children,
-}: PropsWithChildren<{ title: string; subtitle: string }>) {
+}: PropsWithChildren<{
+  title: string;
+  subtitle: string;
+  headerVariant?: "hero" | "compact";
+  scrollEnabled?: boolean;
+}>) {
+  const pathname = usePathname();
+  const Container = scrollEnabled ? ScrollView : View;
+  const containerProps = scrollEnabled ? { contentContainerStyle: styles.page } : { style: styles.page };
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.page}>
-        <View style={styles.hero}>
-          <Text style={styles.eyebrow}>PienoSmart</Text>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.subtitle}>{subtitle}</Text>
+      <Container {...containerProps}>
+        <View style={[styles.headerBar, headerVariant === "compact" && styles.headerBarCompact]}>
+          <View style={styles.brandRow}>
+            <Image source={logo} style={styles.logo} resizeMode="contain" />
+
+            <View style={styles.brandBlock}>
+              <Text style={styles.eyebrow}>PienoSmart</Text>
+
+              <Text style={[styles.title, headerVariant === "compact" && styles.titleCompact]}>
+                {title}
+              </Text>
+
+              <Text style={[styles.subtitle, headerVariant === "compact" && styles.subtitleCompact]}>
+                {subtitle}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.menuRow}>
+            {NAV_ITEMS.map((item) => {
+              const isActive = pathname === item.href;
+
+              return (
+                <Link key={item.href} href={item.href} asChild>
+                  <Pressable style={[styles.menuItem, isActive && styles.menuItemActive]}>
+                    <Text style={[styles.menuItemText, isActive && styles.menuItemTextActive]}>
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                </Link>
+              );
+            })}
+          </View>
         </View>
+
         <View style={styles.content}>{children}</View>
-      </View>
+      </Container>
     </SafeAreaView>
   );
 }
@@ -23,40 +75,85 @@ export function AppShell({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f6f3ea",
+    backgroundColor: colors.background,
   },
   page: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    gap: 18,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
+    gap: spacing.md,
   },
-  hero: {
-    padding: 20,
-    borderRadius: 28,
-    backgroundColor: "#163a2b",
-    gap: 8,
+  headerBar: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryDark,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  headerBarCompact: {
+    paddingVertical: spacing.sm,
+  },
+  brandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  logo: {
+    width: 52,
+    height: 52,
+  },
+  brandBlock: {
+    gap: 2,
+    flex: 1,
   },
   eyebrow: {
-    color: "#d6e8de",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
+    color: "#D9E4F1",
+    ...typography.eyebrow,
   },
   title: {
-    color: "#fffaf1",
-    fontSize: 30,
-    fontWeight: "800",
-    lineHeight: 36,
+    color: colors.inverseText,
+    ...typography.pageTitle,
+  },
+  titleCompact: {
+    fontSize: 18,
+    lineHeight: 22,
   },
   subtitle: {
-    color: "#d8eadf",
-    fontSize: 15,
-    lineHeight: 21,
+    color: "#D4E0EC",
+    ...typography.body,
+  },
+  subtitleCompact: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  menuRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  menuItem: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: "rgba(217, 228, 241, 0.18)",
+    backgroundColor: "rgba(255,255,255,0.05)",
+  },
+  menuItemActive: {
+    backgroundColor: colors.surface,
+    borderColor: colors.surface,
+  },
+  menuItemText: {
+    color: "#D9E4F1",
+    ...typography.caption,
+    fontWeight: "700",
+  },
+  menuItemTextActive: {
+    color: colors.primary,
   },
   content: {
-    flex: 1,
-    gap: 16,
+    gap: spacing.md,
   },
 });
