@@ -26,48 +26,52 @@ export function AppShell({
   scrollEnabled?: boolean;
 }>) {
   const pathname = usePathname();
-  const Container = scrollEnabled ? ScrollView : View;
-  const containerProps = scrollEnabled ? { contentContainerStyle: styles.page } : { style: styles.page };
+  const headerStyle = StyleSheet.flatten([styles.headerBar, headerVariant === "compact" && styles.headerBarCompact]);
+  const titleStyle = StyleSheet.flatten([styles.title, headerVariant === "compact" && styles.titleCompact]);
+  const subtitleStyle = StyleSheet.flatten([styles.subtitle, headerVariant === "compact" && styles.subtitleCompact]);
+  const shellContent = (
+    <>
+      <View style={headerStyle}>
+        <View style={styles.brandRow}>
+          <Image source={logo} style={styles.logo} resizeMode="contain" />
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <Container {...containerProps}>
-        <View style={[styles.headerBar, headerVariant === "compact" && styles.headerBarCompact]}>
-          <View style={styles.brandRow}>
-            <Image source={logo} style={styles.logo} resizeMode="contain" />
+          <View style={styles.brandBlock}>
+            <Text style={styles.eyebrow}>PienoSmart</Text>
 
-            <View style={styles.brandBlock}>
-              <Text style={styles.eyebrow}>PienoSmart</Text>
+            <Text style={titleStyle}>{title}</Text>
 
-              <Text style={[styles.title, headerVariant === "compact" && styles.titleCompact]}>
-                {title}
-              </Text>
-
-              <Text style={[styles.subtitle, headerVariant === "compact" && styles.subtitleCompact]}>
-                {subtitle}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.menuRow}>
-            {NAV_ITEMS.map((item) => {
-              const isActive = pathname === item.href;
-
-              return (
-                <Link key={item.href} href={item.href} asChild>
-                  <Pressable style={[styles.menuItem, isActive && styles.menuItemActive]}>
-                    <Text style={[styles.menuItemText, isActive && styles.menuItemTextActive]}>
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                </Link>
-              );
-            })}
+            <Text style={subtitleStyle}>{subtitle}</Text>
           </View>
         </View>
 
-        <View style={styles.content}>{children}</View>
-      </Container>
+        <View style={styles.menuRow}>
+          {NAV_ITEMS.map((item) => {
+            const isActive = pathname === item.href;
+            const menuItemStyle = StyleSheet.flatten([styles.menuItem, isActive && styles.menuItemActive]);
+            const menuItemTextStyle = StyleSheet.flatten([styles.menuItemText, isActive && styles.menuItemTextActive]);
+
+            return (
+              <Link key={item.href} href={item.href} asChild>
+                <Pressable style={menuItemStyle}>
+                  <Text style={menuItemTextStyle}>{item.label}</Text>
+                </Pressable>
+              </Link>
+            );
+          })}
+        </View>
+      </View>
+
+      <View style={styles.content}>{children}</View>
+    </>
+  );
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      {scrollEnabled ? (
+        <ScrollView contentContainerStyle={styles.page}>{shellContent}</ScrollView>
+      ) : (
+        <View style={styles.page}>{shellContent}</View>
+      )}
     </SafeAreaView>
   );
 }
