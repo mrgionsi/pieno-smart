@@ -36,7 +36,7 @@ export function ProfileManager() {
       const response = await getVehicleProfiles();
       setProfiles(response.items);
     } catch (fetchError) {
-      setError(fetchError instanceof Error ? fetchError.message : "Unable to load profiles");
+      setError(fetchError instanceof Error ? fetchError.message : "Unable To Load Profiles");
     } finally {
       setLoading(false);
     }
@@ -68,7 +68,7 @@ export function ProfileManager() {
       setIsDefault(false);
       await loadProfiles();
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : "Unable to create profile");
+      setError(createError instanceof Error ? createError.message : "Unable To Create Profile");
     } finally {
       setSubmitting(false);
     }
@@ -80,30 +80,30 @@ export function ProfileManager() {
       await deleteVehicleProfile(profileId);
       await loadProfiles();
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete profile");
+      setError(deleteError instanceof Error ? deleteError.message : "Unable To Delete Profile");
     }
   }
 
   return (
     <View style={styles.container}>
       <View style={styles.formPanel}>
-        <Text style={styles.heading}>Vehicle profiles</Text>
+        <Text style={styles.heading}>Vehicle Profiles</Text>
         <Text style={styles.subheading}>
-          These profiles personalize recommendation defaults for fuel and service mode.
+          These Profiles Personalize Recommendation Defaults For Fuel And Service Mode.
         </Text>
 
-        <Field label="Profile name" value={name} onChangeText={setName} />
-        <Field label="Consumption (l/100km)" value={consumption} onChangeText={setConsumption} />
-        <Field label="Tank capacity (liters)" value={tankCapacity} onChangeText={setTankCapacity} />
+        <Field label="Profile Name" value={name} onChangeText={setName} />
+        <Field label="Consumption (L/100Km)" value={consumption} onChangeText={setConsumption} />
+        <Field label="Tank Capacity (Liters)" value={tankCapacity} onChangeText={setTankCapacity} />
 
-        <Text style={styles.label}>Fuel type</Text>
+        <Text style={styles.label}>Fuel Type</Text>
         <View style={styles.chipRow}>
           {FUEL_OPTIONS.map((option) => (
             <Chip key={option} label={option} active={fuelType === option} onPress={() => setFuelType(option)} />
           ))}
         </View>
 
-        <Text style={styles.label}>Preferred service mode</Text>
+        <Text style={styles.label}>Preferred Service Mode</Text>
         <View style={styles.chipRow}>
           {SERVICE_OPTIONS.map((option) => (
             <Chip key={option} label={option} active={serviceMode === option} onPress={() => setServiceMode(option)} />
@@ -112,7 +112,7 @@ export function ProfileManager() {
 
         <Pressable style={[styles.toggle, isDefault && styles.toggleActive]} onPress={() => setIsDefault((value) => !value)}>
           <Text style={[styles.toggleText, isDefault && styles.toggleTextActive]}>
-            {isDefault ? "Will become default" : "Create as secondary profile"}
+            {isDefault ? "Will Become Default" : "Create As Secondary Profile"}
           </Text>
         </Pressable>
 
@@ -121,7 +121,7 @@ export function ProfileManager() {
           onPress={() => void handleCreate()}
           disabled={!name.trim() || submitting}
         >
-          <Text style={styles.ctaText}>{submitting ? "Creating…" : "Create vehicle profile"}</Text>
+          <Text style={styles.ctaText}>{submitting ? "Creating…" : "Create Vehicle Profile"}</Text>
         </Pressable>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -129,12 +129,12 @@ export function ProfileManager() {
 
       <View style={styles.listPanel}>
         <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>Saved profiles</Text>
+          <Text style={styles.listTitle}>Saved Profiles</Text>
           {loading ? <ActivityIndicator color={colors.primary} /> : null}
         </View>
 
         {profiles.length === 0 && !loading ? (
-          <Text style={styles.empty}>No saved profiles yet.</Text>
+          <Text style={styles.empty}>No Saved Profiles Yet.</Text>
         ) : null}
 
         <View style={styles.list}>
@@ -147,7 +147,7 @@ export function ProfileManager() {
                 </Text>
               </View>
               <View style={styles.profileActions}>
-                {profile.is_default ? <Text style={styles.defaultBadge}>default</Text> : null}
+                {profile.is_default ? <Text style={styles.defaultBadge}>Default</Text> : null}
                 <Pressable style={styles.deleteButton} onPress={() => void handleDelete(profile.id)}>
                   <Text style={styles.deleteText}>Delete</Text>
                 </Pressable>

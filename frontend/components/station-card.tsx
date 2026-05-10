@@ -28,7 +28,7 @@ export function StationCard({
     >
       <View style={styles.header}>
         <View style={styles.identity}>
-          <Text style={styles.name}>{station.name ?? "Unnamed station"}</Text>
+          <Text style={styles.name}>{station.name ?? "Unnamed Station"}</Text>
           <Text style={styles.meta}>
             {[station.brand, station.comune, station.provincia].filter(Boolean).join(" · ")}
           </Text>
@@ -39,15 +39,15 @@ export function StationCard({
         </View>
       </View>
 
-      <Text style={styles.address}>{station.address ?? "No address available"}</Text>
+      <Text style={styles.address}>{station.address ?? "No Address Available"}</Text>
 
       <View style={styles.priceRow}>
         <View>
           <Text style={styles.priceLabel}>
-            {[station.selected_fuel_type, station.selected_service_mode].filter(Boolean).join(" · ") || "No price"}
+            {[station.selected_fuel_type, station.selected_service_mode].filter(Boolean).join(" · ") || "No Price"}
           </Text>
           <Text style={styles.priceValue}>
-            {station.current_price ? `€${station.current_price}` : "Price unavailable"}
+            {station.current_price ? `€${station.current_price}` : "Price Unavailable"}
           </Text>
         </View>
         {station.score !== null && station.score !== undefined ? (

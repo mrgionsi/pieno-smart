@@ -6,14 +6,14 @@ import { colors, radius, spacing, typography } from "../theme";
 export default function FavoritesScreen() {
   return (
     <AppShell
-      title="Favorites will keep your trusted stations close"
-      subtitle="This section will collect saved stations and make nearby and trip decisions faster."
+      title="Favorites Will Keep Your Trusted Stations Close"
+      subtitle="This Section Will Collect Saved Stations And Make Nearby And Trip Decisions Faster."
       headerVariant="compact"
     >
       <View style={styles.card}>
         <Text style={styles.title}>Favorites</Text>
         <Text style={styles.body}>
-          The backend foundation is already in place. The next step here is the saved-station flow and favorite-aware recommendation.
+          The Backend Foundation Is Already In Place. The Next Step Here Is The Saved-Station Flow And Favorite-Aware Recommendation.
         </Text>
       </View>
     </AppShell>

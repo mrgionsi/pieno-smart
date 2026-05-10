@@ -4,8 +4,8 @@ import { AppShell } from "../components/shell";
 export default function ProfilesScreen() {
   return (
     <AppShell
-      title="Profiles shape smarter suggestions"
-      subtitle="Save fuel and service preferences now so the same profile can drive nearby and route-based recommendation later."
+      title="Profiles Shape Smarter Suggestions"
+      subtitle="Save Fuel And Service Preferences Now So The Same Profile Can Drive Nearby And Route-Based Recommendation Later."
     >
       <ProfileManager />
     </AppShell>
