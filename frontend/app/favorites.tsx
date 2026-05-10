@@ -7,13 +7,13 @@ export default function FavoritesScreen() {
   return (
     <AppShell
       title="Favorites Will Keep Your Trusted Stations Close"
-      subtitle="This Section Will Collect Saved Stations And Make Nearby And Trip Decisions Faster."
+      subtitle="This Section Will Collect Saved Stations and Make Nearby and Trip Decisions Faster."
       headerVariant="compact"
     >
       <View style={styles.card}>
         <Text style={styles.title}>Favorites</Text>
         <Text style={styles.body}>
-          The Backend Foundation Is Already In Place. The Next Step Here Is The Saved-Station Flow And Favorite-Aware Recommendation.
+          The Backend Foundation Is Already In Place. The Next Step Here is the Saved-Station Flow and Favorite-Aware Recommendation.
         </Text>
       </View>
     </AppShell>

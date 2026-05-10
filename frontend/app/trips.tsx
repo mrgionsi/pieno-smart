@@ -6,14 +6,14 @@ import { colors, radius, spacing, typography } from "../theme";
 export default function TripsScreen() {
   return (
     <AppShell
-      title="Trip Planning Is The Next Major Product Surface"
-      subtitle="This Section Will Turn Route-Aware Refueling Into A First-Class Decision Flow."
+      title="Trip Planning Is the Next Major Product Surface"
+      subtitle="This Section Will Turn Route-Aware Refueling into a First-Class Decision Flow."
       headerVariant="compact"
     >
       <View style={styles.card}>
         <Text style={styles.title}>Trips</Text>
         <Text style={styles.body}>
-          This Screen Is The Placeholder For The Route-Based Refuel Planner. It Gives The Web App A Clear Information Architecture Now, Even Before The Full Trip Flow Lands On This Branch.
+          This Screen Is the Placeholder for the Route-Based Refuel Planner. It Gives the Web App a Clear Information Architecture Now, Even Before the Full Trip Flow Lands on This Branch.
         </Text>
       </View>
     </AppShell>

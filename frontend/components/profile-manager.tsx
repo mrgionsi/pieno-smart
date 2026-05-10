@@ -36,7 +36,7 @@ export function ProfileManager() {
       const response = await getVehicleProfiles();
       setProfiles(response.items);
     } catch (fetchError) {
-      setError(fetchError instanceof Error ? fetchError.message : "Unable To Load Profiles");
+      setError(fetchError instanceof Error ? fetchError.message : "Unable to load profiles");
     } finally {
       setLoading(false);
     }
@@ -68,7 +68,7 @@ export function ProfileManager() {
       setIsDefault(false);
       await loadProfiles();
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : "Unable To Create Profile");
+      setError(createError instanceof Error ? createError.message : "Unable to create profile");
     } finally {
       setSubmitting(false);
     }
@@ -80,7 +80,7 @@ export function ProfileManager() {
       await deleteVehicleProfile(profileId);
       await loadProfiles();
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Unable To Delete Profile");
+      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete profile");
     }
   }
 
@@ -89,7 +89,7 @@ export function ProfileManager() {
       <View style={styles.formPanel}>
         <Text style={styles.heading}>Vehicle Profiles</Text>
         <Text style={styles.subheading}>
-          These Profiles Personalize Recommendation Defaults For Fuel And Service Mode.
+          These profiles personalize recommendation defaults for fuel and service mode.
         </Text>
 
         <Field label="Profile Name" value={name} onChangeText={setName} />
@@ -112,7 +112,7 @@ export function ProfileManager() {
 
         <Pressable style={[styles.toggle, isDefault && styles.toggleActive]} onPress={() => setIsDefault((value) => !value)}>
           <Text style={[styles.toggleText, isDefault && styles.toggleTextActive]}>
-            {isDefault ? "Will Become Default" : "Create As Secondary Profile"}
+            {isDefault ? "Will Become Default" : "Create as Secondary Profile"}
           </Text>
         </Pressable>
 

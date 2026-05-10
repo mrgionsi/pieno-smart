@@ -360,6 +360,8 @@ export function NearbyExplorer() {
                 onPress={() => setShowSortInfo((value) => !value)}
                 accessibilityRole="button"
                 accessibilityLabel="Explain Sort Options"
+                accessibilityHint="Shows Or Hides An Explanation For Each Sort Mode"
+                accessibilityState={{ expanded: showSortInfo }}
               >
                 <Text style={styles.sortInfoButtonText}>ⓘ</Text>
               </Pressable>

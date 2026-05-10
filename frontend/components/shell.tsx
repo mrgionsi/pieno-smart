@@ -89,7 +89,7 @@ export function AppShell({
           <Text style={subtitleStyle}>{subtitle}</Text>
 
           <Text style={styles.valueLine}>
-            Better Than A Plain Fuel List: Compare Stations Using Distance, Freshness, Convenience, And Trip Context.
+            Better Than a Plain Fuel List: Compare Stations Using Distance, Freshness, Convenience, and Trip Context.
           </Text>
         </View>
       </View>
