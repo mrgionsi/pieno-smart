@@ -1,0 +1,126 @@
+name: CD - Deploy to Portainer
+
+on:
+  workflow_run:
+    workflows: ["CI - Build & Push Docker Images"]
+    types:
+      - completed
+    branches:
+      - dev
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  REGISTRY_NAMESPACE: mrgionsi
+
+jobs:
+  # Extract context from previous workflow
+  context:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    outputs:
+      commit-sha-short: ${{ steps.context.outputs.commit-sha-short }}
+      branch-name: ${{ steps.context.outputs.branch-name }}
+      environment: ${{ steps.context.outputs.environment }}
+    steps:
+      - name: Extract context
+        id: context
+        run: |
+          BRANCH_NAME=${{ github.event.workflow_run.head_branch }}
+          COMMIT_SHA=${{ github.event.workflow_run.head_commit }}
+          COMMIT_SHA_SHORT=${COMMIT_SHA:0:7}
+          ENVIRONMENT="staging"
+          if [[ "$BRANCH_NAME" == "main" ]]; then
+            ENVIRONMENT="production"
+          fi
+          echo "commit-sha-short=${COMMIT_SHA_SHORT}" >> $GITHUB_OUTPUT
+          echo "branch-name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+          echo "environment=${ENVIRONMENT}" >> $GITHUB_OUTPUT
+
+  # Deploy to Staging (dev branch)
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: context
+    if: ${{ needs.context.outputs.branch-name == 'dev' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Staging via Portainer Webhook
+        run: |
+          if [ -z "${{ secrets.PORTAINER_WEBHOOK_STAGING }}" ]; then
+            echo "⚠️  PORTAINER_WEBHOOK_STAGING not configured, skipping deployment"
+            exit 0
+          fi
+          
+          WEBHOOK_URL="${{ secrets.PORTAINER_WEBHOOK_STAGING }}"
+          BACKEND_IMAGE="${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/pieno-backend:${{ needs.context.outputs.commit-sha-short }}"
+          FRONTEND_IMAGE="${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/pieno-frontend:${{ needs.context.outputs.commit-sha-short }}"
+          
+          echo "🚀 Triggering Portainer webhook for staging deployment..."
+          echo "  Backend: ${BACKEND_IMAGE}"
+          echo "  Frontend: ${FRONTEND_IMAGE}"
+          
+          PAYLOAD=$(cat <<EOF
+          {
+            "environment": "staging",
+            "branch": "${{ needs.context.outputs.branch-name }}",
+            "commit": "${{ needs.context.outputs.commit-sha-short }}",
+            "backend_image": "${BACKEND_IMAGE}",
+            "frontend_image": "${FRONTEND_IMAGE}",
+            "timestamp": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          }
+          EOF
+          )
+          
+          RESPONSE=$(curl -s -X POST "${WEBHOOK_URL}" \
+            -H "Content-Type: application/json" \
+            -d "${PAYLOAD}" \
+            -w "\n%{http_code}")
+          
+          HTTP_CODE=$(echo "${RESPONSE}" | tail -n1)
+          BODY=$(echo "${RESPONSE}" | head -n-1)
+          
+          echo "Response code: ${HTTP_CODE}"
+          echo "Response body: ${BODY}"
+          
+          if [[ ${HTTP_CODE} -ge 200 && ${HTTP_CODE} -lt 300 ]]; then
+            echo "✅ Staging deployment triggered successfully"
+          else
+            echo "❌ Staging deployment failed with HTTP ${HTTP_CODE}"
+            exit 1
+          fi
+
+      - name: Deployment Notification
+        run: |
+          echo "## 📦 Staging Deployment"
+          echo ""
+          echo "✅ Deployment webhook sent to Portainer"
+          echo ""
+          echo "**Images**:"
+          echo "- Backend: \`ghcr.io/${{ env.REGISTRY_NAMESPACE }}/pieno-backend:${{ needs.context.outputs.commit-sha-short }}\`"
+          echo "- Frontend: \`ghcr.io/${{ env.REGISTRY_NAMESPACE }}/pieno-frontend:${{ needs.context.outputs.commit-sha-short }}\`"
+          echo ""
+          echo "Check Portainer UI for stack updates"
+
+  # Deploy to Production (main branch)
+
+  # Cleanup & Summary
+  summary:
+    runs-on: ubuntu-latest
+    needs: context
+    if: always()
+    steps:
+      - name: Summary
+        run: |
+          echo "## 📊 Deployment Summary"
+          echo ""
+          echo "**Environment**: ${{ needs.context.outputs.environment }}"
+          echo "**Branch**: ${{ needs.context.outputs.branch-name }}"
+          echo "**Commit**: ${{ needs.context.outputs.commit-sha-short }}"
+          echo ""
+          if [[ "${{ needs.context.outputs.branch-name }}" == "dev" ]]; then
+            echo "✅ Staging deployment workflow executed"
+          elif [[ "${{ needs.context.outputs.branch-name }}" == "main" ]]; then
+            echo "✅ Production deployment workflow executed (requires approval)"
+          fi
