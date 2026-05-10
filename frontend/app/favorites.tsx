@@ -13,7 +13,7 @@ export default function FavoritesScreen() {
       <View style={styles.card}>
         <Text style={styles.title}>Favorites</Text>
         <Text style={styles.body}>
-          The Backend Foundation Is Already In Place. The Next Step Here is the Saved-Station Flow and Favorite-Aware Recommendation.
+          The Backend Foundation Is Already in Place. The Next Step Here is the Saved-Station Flow and Favorite-Aware Recommendation.
         </Text>
       </View>
     </AppShell>
