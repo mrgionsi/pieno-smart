@@ -1,11 +1,10 @@
 import { Link, usePathname } from "expo-router";
 import { PropsWithChildren, useState } from "react";
-import { Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
 import { colors, elevation, radius, spacing, typography } from "../theme";
 
 const logo = require("../assets/pienosmart_logo.png");
-const favicon = require("../favicon.png");
 
 const NAV_ITEMS = [
   { href: "/", label: "Nearby", icon: "⌖" },
@@ -27,8 +26,10 @@ export function AppShell({
   scrollEnabled?: boolean;
 }>) {
   const pathname = usePathname();
+  const { width } = useWindowDimensions();
   const [menuOpen, setMenuOpen] = useState(false);
   const currentSection = pathname === "/" ? "/" : `/${pathname.split("/").filter(Boolean)[0] ?? ""}`;
+  const isDesktopHeader = width >= 980;
   const headerStyle = StyleSheet.flatten([styles.headerBar, headerVariant === "compact" && styles.headerBarCompact]);
   const titleStyle = StyleSheet.flatten([styles.title, headerVariant === "compact" && styles.titleCompact]);
   const subtitleStyle = StyleSheet.flatten([styles.subtitle, headerVariant === "compact" && styles.subtitleCompact]);
@@ -36,21 +37,40 @@ export function AppShell({
     <>
       <View style={headerStyle}>
         <View style={styles.topRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={menuOpen ? "Close menu" : "Open menu"}
-            style={({ pressed }) => [styles.menuToggle, pressed && styles.menuTogglePressed]}
-            onPress={() => setMenuOpen((value) => !value)}
-          >
-            <View style={styles.menuIcon}>
-              <View style={styles.menuIconLine} />
-              <View style={styles.menuIconLine} />
-              <View style={styles.menuIconLine} />
+          {isDesktopHeader ? (
+            <View style={styles.inlineMenuRow}>
+              {NAV_ITEMS.map((item) => {
+                const isActive = currentSection === item.href;
+                const menuItemStyle = StyleSheet.flatten([styles.inlineMenuItem, isActive && styles.inlineMenuItemActive]);
+                const menuItemTextStyle = StyleSheet.flatten([styles.inlineMenuItemText, isActive && styles.inlineMenuItemTextActive]);
+
+                return (
+                  <Link key={item.href} href={item.href} asChild>
+                    <Pressable style={menuItemStyle}>
+                      <Text style={styles.inlineMenuItemIcon}>{item.icon}</Text>
+                      <Text style={menuItemTextStyle}>{item.label}</Text>
+                    </Pressable>
+                  </Link>
+                );
+              })}
             </View>
-          </Pressable>
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={menuOpen ? "Close menu" : "Open menu"}
+              style={({ pressed }) => [styles.menuToggle, pressed && styles.menuTogglePressed]}
+              onPress={() => setMenuOpen((value) => !value)}
+            >
+              <View style={styles.menuIcon}>
+                <View style={styles.menuIconLine} />
+                <View style={styles.menuIconLine} />
+                <View style={styles.menuIconLine} />
+              </View>
+            </Pressable>
+          )}
 
           <View style={styles.headerActionBadge}>
-            <Image source={favicon} style={styles.headerActionImage} resizeMode="contain" />
+            <Image source={logo} style={styles.headerActionImage} resizeMode="contain" />
           </View>
         </View>
 
@@ -69,7 +89,7 @@ export function AppShell({
           <Text style={subtitleStyle}>{subtitle}</Text>
 
           <Text style={styles.valueLine}>
-            Better than a plain fuel list: compare stations using distance, freshness, convenience, and trip context.
+            Better Than A Plain Fuel List: Compare Stations Using Distance, Freshness, Convenience, And Trip Context.
           </Text>
         </View>
       </View>
@@ -84,7 +104,7 @@ export function AppShell({
       ) : (
         <View style={styles.page}>{shellContent}</View>
       )}
-      {menuOpen ? (
+      {menuOpen && !isDesktopHeader ? (
         <View style={styles.menuOverlay}>
           <View style={styles.menuOverlayHeader}>
             <Pressable
@@ -138,27 +158,61 @@ const styles = StyleSheet.create({
   },
   headerBar: {
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     borderRadius: radius.md,
     backgroundColor: colors.primaryDark,
     borderWidth: 1,
     borderColor: colors.primary,
   },
   headerBarCompact: {
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.xs,
   },
   topRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
+  inlineMenuRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    flexWrap: "wrap",
+  },
+  inlineMenuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: "rgba(217, 228, 241, 0.16)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+  },
+  inlineMenuItemActive: {
+    borderColor: colors.accentWarm,
+    backgroundColor: "rgba(217, 142, 61, 0.12)",
+  },
+  inlineMenuItemIcon: {
+    color: "#D9E4F1",
+    fontSize: 12,
+    lineHeight: 14,
+  },
+  inlineMenuItemText: {
+    color: "#D9E4F1",
+    ...typography.caption,
+    fontWeight: "700",
+  },
+  inlineMenuItemTextActive: {
+    color: colors.inverseText,
+  },
   heroRow: {
     flexDirection: "row",
     alignItems: "stretch",
     gap: spacing.lg,
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
@@ -172,7 +226,7 @@ const styles = StyleSheet.create({
     borderColor: colors.borderWarm,
     alignItems: "center",
     justifyContent: "center",
-    padding: spacing.md,
+    padding: spacing.sm,
   },
   brandBlock: {
     gap: spacing.xs,
@@ -180,8 +234,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   logo: {
-    width: 108,
-    height: 108,
+    width: 90,
+    height: 90,
   },
   eyebrow: {
     color: colors.primary,
@@ -200,14 +254,14 @@ const styles = StyleSheet.create({
     ...typography.body,
   },
   subtitleCompact: {
-    fontSize: 14,
-    lineHeight: 19,
+    fontSize: 13,
+    lineHeight: 17,
   },
   valueLine: {
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
     color: colors.secondary,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 16,
   },
   menuToggle: {
     width: 38,
@@ -233,9 +287,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#D9E4F1",
   },
   headerActionBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 999,
+    width: 130,
+    height: 42,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: "rgba(217, 228, 241, 0.18)",
     backgroundColor: "rgba(255,255,255,0.06)",
@@ -244,8 +298,8 @@ const styles = StyleSheet.create({
     ...elevation.focus,
   },
   headerActionImage: {
-    width: 22,
-    height: 22,
+    width: 108,
+    height: 30,
   },
   menuOverlay: {
     position: "absolute",
