@@ -54,12 +54,11 @@ This document describes the CI/CD pipeline for PienoSmart, which automates build
    - Install dependencies from `pyproject.toml`
    - Run linting (pylint) and tests (pytest)
    - Validate Alembic migrations
-3. **Frontend Build** (parallel):
-   - Checkout code
-   - Set up Node.js 22
-   - Install npm dependencies
-   - Build production web export via `npm run build` (Expo static export)
-   - Verify build artifacts exist
+### 3. **Database Build** (parallel):
+   - Uses PostGIS service in GitHub Actions
+   - Runs Alembic migrations to set up schema
+   - Validates database connectivity and PostGIS extensions
+   - Prepares database for backend testing
 4. **Docker Backend**:
    - Build multi-stage Docker image (builder → runtime)
    - Tag with commit SHA, branch name, and `latest`
@@ -172,6 +171,33 @@ This exports the Expo web app as static files to the `dist/` directory.
 **Environment Variables**: None required at runtime (API URL configured in build or frontend code)
 
 **Registry**: `ghcr.io/mrgionsi/pieno-frontend:<tag>`
+
+### Database Image
+
+**Dockerfile**: `database/Dockerfile`
+
+**Base Image**: `postgis/postgis:18-3.6`
+
+**Features**:
+- PostGIS 3.6 extensions enabled for geospatial operations
+- Database initialization scripts for schema setup
+- Alembic migration support
+- Health check (validates PostgreSQL connectivity)
+- Optimized for both development and production
+
+**Environment Variables** (configured in image):
+- `POSTGRES_DB`: `pienosmart`
+- `POSTGRES_USER`: `postgres`
+- `POSTGRES_PASSWORD`: `postgres`
+
+**Database Schema**:
+- User management and profiles
+- Vehicle information and fuel types
+- Fuel station data with geospatial coordinates
+- Trip records and consumption metrics
+- Alert system for price notifications
+
+**Registry**: `ghcr.io/mrgionsi/pieno-database:<tag>`
 
 ## Image Tagging Strategy
 

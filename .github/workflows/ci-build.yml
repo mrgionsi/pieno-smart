@@ -36,11 +36,42 @@ jobs:
           echo "branch-name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
           echo "environment=${ENVIRONMENT}" >> $GITHUB_OUTPUT
 
-  # Build Backend
-  build-backend:
+  # Build Database
+  build-database:
     runs-on: ubuntu-latest
     needs: metadata
+    services:
+      db:
+        image: postgis/postgis:18-3.6
+        env:
+          POSTGRES_DB: pienosmart
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Wait for database
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for database..."
+            sleep 2
+          done
+          echo "Database is ready"
+
+      - name: Run database migrations
+        working-directory: backend
+        run: |
+          pip install -e .
+          alembic upgrade head
+          echo "✓ Database migrations completed"
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -180,10 +211,46 @@ jobs:
       - name: Image digest
         run: echo "Frontend image pushed successfully"
 
+  # Docker Build & Push - Database
+  docker-database:
+    runs-on: ubuntu-latest
+    needs: [metadata, build-database]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push database image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./database
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/pieno-database:${{ needs.metadata.outputs.commit-sha-short }}
+            ${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/pieno-database:${{ needs.metadata.outputs.branch-name }}
+            ${{ env.REGISTRY }}/${{ env.REGISTRY_NAMESPACE }}/pieno-database:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Image digest
+        run: echo "Database image pushed successfully"
+
   # Summary
   summary:
     runs-on: ubuntu-latest
-    needs: [metadata, docker-backend, docker-frontend]
+    needs: [metadata, docker-backend, docker-frontend, docker-database]
     if: always()
     steps:
       - name: Workflow Summary
@@ -197,5 +264,6 @@ jobs:
           echo "**Images Built**:"
           echo "- Backend: \`ghcr.io/${{ env.REGISTRY_NAMESPACE }}/pieno-backend:${{ needs.metadata.outputs.commit-sha-short }}\`"
           echo "- Frontend: \`ghcr.io/${{ env.REGISTRY_NAMESPACE }}/pieno-frontend:${{ needs.metadata.outputs.commit-sha-short }}\`"
+          echo "- Database: \`ghcr.io/${{ env.REGISTRY_NAMESPACE }}/pieno-database:${{ needs.metadata.outputs.commit-sha-short }}\`"
           echo ""
           echo "Next step: Deployment via cd-deploy workflow"

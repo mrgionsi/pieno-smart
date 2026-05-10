@@ -50,8 +50,9 @@ git push  # or merge a PR to dev
 Expected results:
 - ✅ CI workflow runs (~3-5 minutes)
 - ✅ Backend builds and tests pass
+- ✅ Database setup and migrations complete
 - ✅ Frontend builds successfully
-- ✅ Docker images pushed to `ghcr.io/mrgionsi/pieno-backend` and `pieno-frontend`
+- ✅ Docker images pushed to `ghcr.io/mrgionsi/pieno-backend`, `pieno-frontend`, and `pieno-database`
 - ✅ CD workflow triggers automatically
 - ✅ Portainer webhook called for staging deployment
 
@@ -61,9 +62,11 @@ Expected results:
 # List available images
 docker pull ghcr.io/mrgionsi/pieno-backend:dev
 docker pull ghcr.io/mrgionsi/pieno-frontend:dev
+docker pull ghcr.io/mrgionsi/pieno-database:dev
 
 # Check image info
 docker inspect ghcr.io/mrgionsi/pieno-backend:dev
+docker inspect ghcr.io/mrgionsi/pieno-database:dev
 ```
 
 ### 4. Verify Portainer Deployment
