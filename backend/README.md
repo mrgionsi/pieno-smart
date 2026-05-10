@@ -199,11 +199,43 @@ Run Ruff:
 ruff check .
 ```
 
-Run the future ingestion entrypoint:
+Run the ingestion job entrypoint:
 
 ```bash
-python -m app.ingestion.run
+python -m app.jobs.ingestion
 ```
+
+Compatibility note:
+
+- `python -m app.ingestion.run` still works as a thin wrapper
+- new operational and deployment work should target `app.jobs.ingestion`
+
+## Ingestion Deployment Shape
+
+The ingestion logic remains reusable under `app.ingestion`, while the autonomous daily runner now lives under `app.jobs.ingestion`.
+
+This split is intentional:
+
+- `app.ingestion`
+  - parser, normalization, HTTP client, and database upsert service
+  - reusable as library/domain code
+- `app.jobs.ingestion`
+  - executable daily job entrypoint
+  - appropriate for Docker command execution and later Kubernetes CronJobs
+
+Recommended deployment usage:
+
+- same backend image, different command:
+  - run the API normally for web traffic
+  - run `python -m app.jobs.ingestion --download-current` for the daily job
+- separate ingestion container:
+  - reuse the same backend image or a trimmed worker image
+  - set the container command to `python -m app.jobs.ingestion --download-current`
+- Kubernetes / Helm:
+  - package the ingestion runner as a CronJob
+  - use the same application image and override only the command/args
+
+This avoids another refactor later when moving from Docker Compose to Helm.
 
 ## Docker Commands
 
