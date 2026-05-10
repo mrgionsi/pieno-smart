@@ -23,8 +23,8 @@ export function StationDetailModal({
         <View style={styles.sheet}>
           <View style={styles.header}>
             <View style={styles.headerCopy}>
-              <Text style={styles.eyebrow}>Station details</Text>
-              <Text style={styles.title}>{detail?.name ?? "Station details"}</Text>
+              <Text style={styles.eyebrow}>Station Details</Text>
+              <Text style={styles.title}>{detail?.name ?? "Station Details"}</Text>
             </View>
             <Pressable style={styles.closeButton} onPress={onClose}>
               <Text style={styles.closeLabel}>Close</Text>
@@ -32,7 +32,7 @@ export function StationDetailModal({
           </View>
 
           <ScrollView contentContainerStyle={styles.content}>
-            {loading ? <ActivityIndicator color="#163a2b" /> : null}
+            {loading ? <ActivityIndicator color={colors.primary} /> : null}
             {error ? <Text style={styles.error}>{error}</Text> : null}
             {detail ? (
               <View style={styles.card}>
@@ -48,7 +48,7 @@ export function StationDetailModal({
                         <Text style={styles.priceKey}>
                           {price.fuel_type} · {price.service_mode}
                         </Text>
-                        <Text style={styles.timestamp}>{price.price_effective_at ?? "No timestamp"}</Text>
+                        <Text style={styles.timestamp}>{price.price_effective_at ?? "No Timestamp"}</Text>
                       </View>
                       <Text style={styles.priceValue}>€{price.price}</Text>
                     </View>
