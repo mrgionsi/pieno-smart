@@ -271,13 +271,15 @@ Configure GitHub Environments for production approval:
 
 ## Testing & Quality
 
-**Note**: Tests and quality checks run ONLY on PR creation, not on merge:
+## Testing & Quality
+
+**Note**: Tests and quality checks run on both PR creation and on push to `dev`/`main` branches:
 
 - Backend tests: `pytest tests/` (runs on PR)
 - Backend linting: `pylint app/` (runs on PR)
 - Existing workflow: `.github/workflows/backend-quality.yml`
 
-Post-merge CI workflow still validates but doesn't block deployment.
+The CI build workflow validates on every push but allows some checks to proceed with warnings.
 
 ## Local Testing
 
