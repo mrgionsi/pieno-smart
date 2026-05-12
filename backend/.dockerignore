@@ -3,8 +3,8 @@
 **/.pytest_cache/
 **/.venv/
 **/*.egg-info/
-.env
-.env.local
+.env*
+!.env.example
 .DS_Store
 dist/
 build/
