@@ -58,6 +58,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e '.[dev]'
+
       - name: Wait for database
         run: |
           until pg_isready -h localhost -p 5432 -U postgres; do
@@ -69,26 +81,13 @@ jobs:
       - name: Run database migrations
         working-directory: backend
         run: |
-          pip install -e .
           alembic upgrade head
           echo "✓ Database migrations completed"
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-          cache: 'pip'
-
-      - name: Install dependencies
-        working-directory: backend
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e .
 
       - name: Validate Alembic migrations
         working-directory: backend
         run: |
-          alembic branches || true
+          alembic branches
           echo "✓ Alembic configuration valid"
 
       - name: Run linting
@@ -155,7 +154,7 @@ jobs:
         working-directory: backend
         run: |
           python -m pip install --upgrade pip
-          pip install -e .
+          pip install -e '.[dev]'
 
       - name: Run backend linting
         working-directory: backend
