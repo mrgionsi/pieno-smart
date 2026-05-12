@@ -1,0 +1,124 @@
+version: '3.8'
+
+# PienoSmart Pre-Production Environment
+# This docker-compose file is designed for staging/pre-production deployments
+# It uses the Docker images built by the CI/CD pipeline
+
+services:
+  # Database Service
+  db:
+    image: ghcr.io/mrgionsi/pieno-database:latest
+    container_name: pienosmart-db-preprod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pienosmart
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pienosmart_preprod_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pienosmart"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - pienosmart-preprod
+
+  # Backend API Service
+  backend:
+    image: ghcr.io/mrgionsi/pieno-backend:latest
+    container_name: pienosmart-backend-preprod
+    restart: unless-stopped
+    environment:
+      # Timezone for the ingestion cronjob
+      TZ: Europe/Rome
+
+      # Database connection
+      DATABASE_URL: postgresql+psycopg://postgres:${DB_PASSWORD:-postgres}@db:5432/pienosmart
+
+      # Application settings
+      APP_ENV: staging
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+
+      # CORS settings for pre-prod
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,https://pienosmart-preprod.example.com}
+
+      # Development user (remove in production)
+      DEV_CURRENT_USER_EMAIL: ${DEV_USER_EMAIL:-demo@pienosmart.local}
+      DEV_CURRENT_USER_DISPLAY_NAME: ${DEV_USER_DISPLAY_NAME:-Demo User}
+      DEV_CURRENT_USER_SUBJECT: ${DEV_USER_SUBJECT:-dev-local-user}
+
+      # External API settings
+      MIMIT_HTTP_TIMEOUT_SECONDS: 30.0
+      MIMIT_HTTP_MAX_RETRIES: 3
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/api/docs', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - pienosmart-preprod
+
+  # Frontend Web Service
+  frontend:
+    image: ghcr.io/mrgionsi/pieno-frontend:latest
+    container_name: pienosmart-frontend-preprod
+    restart: unless-stopped
+    environment:
+      # API endpoint for frontend
+      EXPO_PUBLIC_API_BASE_URL: ${FRONTEND_API_BASE_URL:-http://backend:8000/api}
+
+      # Development user settings (for testing)
+      EXPO_PUBLIC_DEV_USER_EMAIL: ${DEV_USER_EMAIL:-demo@pienosmart.local}
+      EXPO_PUBLIC_DEV_USER_DISPLAY_NAME: ${DEV_USER_DISPLAY_NAME:-Demo User}
+      EXPO_PUBLIC_DEV_USER_SUBJECT: ${DEV_USER_SUBJECT:-dev-local-user}
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - pienosmart-preprod
+
+  # Optional: Nginx Reverse Proxy (for production-like setup)
+  nginx:
+    image: nginx:alpine
+    container_name: pienosmart-nginx-preprod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - pienosmart-preprod
+    profiles:
+      - nginx  # Only start with --profile nginx
+
+volumes:
+  pienosmart_preprod_pgdata:
+    driver: local
+
+networks:
+  pienosmart-preprod:
+    driver: bridge

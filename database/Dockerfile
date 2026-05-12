@@ -1,0 +1,25 @@
+# Database Dockerfile for CI/CD
+FROM postgis/postgis:18-3.6
+
+# Set environment variables
+ENV POSTGRES_DB=pienosmart
+ENV POSTGRES_USER=postgres
+ENV POSTGRES_PASSWORD=postgres
+
+# Copy initialization scripts
+COPY init-db.sh /docker-entrypoint-initdb.d/
+COPY alembic-init.sh /docker-entrypoint-initdb.d/
+
+# Copy Alembic migrations (will be copied at build time)
+COPY alembic/ /tmp/alembic/
+
+# Make scripts executable
+RUN chmod +x /docker-entrypoint-initdb.d/init-db.sh \
+    && chmod +x /docker-entrypoint-initdb.d/alembic-init.sh
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD pg_isready -U postgres -d pienosmart || exit 1
+
+# Expose PostgreSQL port
+EXPOSE 5432
