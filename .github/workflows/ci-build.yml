@@ -93,13 +93,13 @@ jobs:
       - name: Run linting
         working-directory: backend
         run: |
-          pylint app/ --fail-under=9.0
+          python -m pylint app/ --fail-under=9.0
           echo "✓ Linting check complete"
 
       - name: Run tests
         working-directory: backend
         run: |
-          pytest tests/ --tb=short -v
+          python -m pytest tests/ --tb=short -v
           echo "✓ Tests complete"
 
   # Build Frontend
@@ -159,13 +159,13 @@ jobs:
       - name: Run backend linting
         working-directory: backend
         run: |
-          pylint app/ --fail-under=9.0
+          python -m pylint app/ --fail-under=9.0
           echo "✓ Backend linting complete"
 
       - name: Run backend tests
         working-directory: backend
         run: |
-          pytest tests/ --tb=short -v
+          python -m pytest tests/ --tb=short -v
           echo "✓ Backend tests complete"
 
   # Docker Build & Push - Backend
