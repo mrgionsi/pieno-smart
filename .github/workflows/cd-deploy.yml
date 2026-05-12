@@ -27,7 +27,7 @@ jobs:
         id: context
         run: |
           BRANCH_NAME=${{ github.event.workflow_run.head_branch }}
-          COMMIT_SHA=${{ github.event.workflow_run.head_commit }}
+          COMMIT_SHA=${{ github.event.workflow_run.head_sha }}
           COMMIT_SHA_SHORT=${COMMIT_SHA:0:7}
           ENVIRONMENT="staging"
           if [[ "$BRANCH_NAME" == "main" ]]; then

@@ -18,6 +18,9 @@ RUN npm run build
 # Runtime stage
 FROM nginx:alpine
 
+# Install wget for container health checks
+RUN apk add --no-cache wget
+
 # Copy built artifacts from builder
 COPY --from=builder /build/dist /usr/share/nginx/html
 

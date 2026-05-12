@@ -94,13 +94,13 @@ jobs:
       - name: Run linting
         working-directory: backend
         run: |
-          pylint app/ --fail-under=9.0 || true
+          pylint app/ --fail-under=9.0
           echo "✓ Linting check complete"
 
       - name: Run tests
         working-directory: backend
         run: |
-          pytest tests/ --tb=short -v || true
+          pytest tests/ --tb=short -v
           echo "✓ Tests complete"
 
   # Build Frontend
