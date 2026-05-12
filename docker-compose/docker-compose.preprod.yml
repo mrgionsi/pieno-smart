@@ -33,6 +33,9 @@ services:
     container_name: pienosmart-backend-preprod
     restart: unless-stopped
     environment:
+      # Timezone for the ingestion cronjob
+      TZ: Europe/Rome
+
       # Database connection
       DATABASE_URL: postgresql+psycopg://postgres:${DB_PASSWORD:-postgres}@db:5432/pienosmart
 
