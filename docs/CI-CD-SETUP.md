@@ -337,7 +337,7 @@ Test web app: Open `http://localhost` in browser
 3. **Test Locally First**: Run `docker build` and `docker run` before pushing
 4. **Review Before Production**: Enable GitHub environment approvals for main branch
 5. **Monitor Deployments**: Check Portainer UI after deployment to verify services are healthy
-6. **Database Migrations**: Handle separately from image deployment (not automatic in CI)
+6. **Database Migrations**: Run automatically in CI during validation; handle schema changes via Alembic
 
 ## Next Steps
 
