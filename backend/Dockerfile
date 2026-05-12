@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     cron \
     tzdata \
     && ln -fs /usr/share/zoneinfo/${TZ} /etc/localtime \
-    dpkg-reconfigure -f noninteractive tzdata \
+    && dpkg-reconfigure -f noninteractive tzdata \
     && rm -rf /var/lib/apt/lists/* /var/cache/debconf/*
 
 # Copy wheels from builder

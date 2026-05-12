@@ -10,9 +10,6 @@ ENV POSTGRES_PASSWORD=postgres
 COPY init-db.sh /docker-entrypoint-initdb.d/
 COPY alembic-init.sh /docker-entrypoint-initdb.d/
 
-# Copy Alembic migrations (will be copied at build time)
-COPY alembic/ /tmp/alembic/
-
 # Make scripts executable
 RUN chmod +x /docker-entrypoint-initdb.d/init-db.sh \
     && chmod +x /docker-entrypoint-initdb.d/alembic-init.sh
