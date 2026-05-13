@@ -39,7 +39,9 @@ The app expects the backend API at:
 
 Default:
 
-- `http://127.0.0.1:8000/api`
+- `/api`
+
+In containerized deployments, the frontend Nginx server should proxy `/api` to the backend service.
 
 ## Current screens
 
