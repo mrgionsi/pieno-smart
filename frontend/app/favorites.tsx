@@ -1,20 +1,21 @@
 import { StyleSheet, Text, View } from "react-native";
 
 import { AppShell } from "../components/shell";
+import { useI18n } from "../lib/i18n";
 import { colors, radius, spacing, typography } from "../theme";
 
 export default function FavoritesScreen() {
+  const { t } = useI18n();
+
   return (
     <AppShell
-      title="Favorites Will Keep Your Trusted Stations Close"
-      subtitle="This Section Will Collect Saved Stations and Make Nearby and Trip Decisions Faster."
+      title={t("favoritesTitle")}
+      subtitle={t("favoritesSubtitle")}
       headerVariant="compact"
     >
       <View style={styles.card}>
-        <Text style={styles.title}>Favorites</Text>
-        <Text style={styles.body}>
-          The Backend Foundation Is Already in Place. The Next Step Here is the Saved-Station Flow and Favorite-Aware Recommendation.
-        </Text>
+        <Text style={styles.title}>{t("navFavorites")}</Text>
+        <Text style={styles.body}>{t("favoritesBody")}</Text>
       </View>
     </AppShell>
   );

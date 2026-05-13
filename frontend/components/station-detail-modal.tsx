@@ -1,5 +1,6 @@
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { translateFreshness, translateFuelType, translateServiceMode, useI18n } from "../lib/i18n";
 import type { StationDetail } from "../lib/types";
 import { colors, radius, spacing, typography } from "../theme";
 
@@ -16,6 +17,8 @@ export function StationDetailModal({
   error: string | null;
   onClose: () => void;
 }) {
+  const { t, locale } = useI18n();
+
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
@@ -23,11 +26,11 @@ export function StationDetailModal({
         <View style={styles.sheet}>
           <View style={styles.header}>
             <View style={styles.headerCopy}>
-              <Text style={styles.eyebrow}>Station Details</Text>
-              <Text style={styles.title}>{detail?.name ?? "Station Details"}</Text>
+              <Text style={styles.eyebrow}>{t("stationDetails")}</Text>
+              <Text style={styles.title}>{detail?.name ?? t("stationDetails")}</Text>
             </View>
             <Pressable style={styles.closeButton} onPress={onClose}>
-              <Text style={styles.closeLabel}>Close</Text>
+              <Text style={styles.closeLabel}>{t("close")}</Text>
             </Pressable>
           </View>
 
@@ -39,16 +42,16 @@ export function StationDetailModal({
                 <Text style={styles.meta}>
                   {[detail.brand, detail.address, detail.comune, detail.provincia].filter(Boolean).join(" · ")}
                 </Text>
-                <Text style={styles.status}>Freshness: {detail.freshness_status}</Text>
+                <Text style={styles.status}>{t("freshness")}: {translateFreshness(locale, detail.freshness_status)}</Text>
 
                 <View style={styles.priceList}>
                   {detail.prices.map((price) => (
                     <View key={`${price.fuel_type}-${price.service_mode}`} style={styles.priceRow}>
                       <View>
                         <Text style={styles.priceKey}>
-                          {price.fuel_type} · {price.service_mode}
+                          {translateFuelType(locale, price.fuel_type)} · {translateServiceMode(locale, price.service_mode)}
                         </Text>
-                        <Text style={styles.timestamp}>{price.price_effective_at ?? "No Timestamp"}</Text>
+                        <Text style={styles.timestamp}>{price.price_effective_at ?? t("noTimestamp")}</Text>
                       </View>
                       <Text style={styles.priceValue}>€{price.price}</Text>
                     </View>

@@ -1,20 +1,21 @@
 import { StyleSheet, Text, View } from "react-native";
 
 import { AppShell } from "../components/shell";
+import { useI18n } from "../lib/i18n";
 import { colors, radius, spacing, typography } from "../theme";
 
 export default function TripsScreen() {
+  const { t } = useI18n();
+
   return (
     <AppShell
-      title="Trip Planning Is the Next Major Product Surface"
-      subtitle="This Section Will Turn Route-Aware Refueling into a First-Class Decision Flow."
+      title={t("tripsTitle")}
+      subtitle={t("tripsSubtitle")}
       headerVariant="compact"
     >
       <View style={styles.card}>
-        <Text style={styles.title}>Trips</Text>
-        <Text style={styles.body}>
-          This Screen Is the Placeholder for the Route-Based Refuel Planner. It Gives the Web App a Clear Information Architecture Now, Even Before the Full Trip Flow Lands on This Branch.
-        </Text>
+        <Text style={styles.title}>{t("navTrips")}</Text>
+        <Text style={styles.body}>{t("tripsBody")}</Text>
       </View>
     </AppShell>
   );

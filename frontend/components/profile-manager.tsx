@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import { createVehicleProfile, deleteVehicleProfile, getVehicleProfiles } from "../lib/api";
+import { translateFuelType, translateServiceMode, useI18n } from "../lib/i18n";
 import type { FuelType, ServiceMode, VehicleProfile } from "../lib/types";
 import { colors, radius, spacing, typography } from "../theme";
 
@@ -18,6 +19,7 @@ const FUEL_OPTIONS: FuelType[] = ["benzina", "diesel", "gpl", "metano", "gnl", "
 const SERVICE_OPTIONS: ServiceMode[] = ["self", "servito", "unknown"];
 
 export function ProfileManager() {
+  const { t, locale } = useI18n();
   const [profiles, setProfiles] = useState<VehicleProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -36,7 +38,7 @@ export function ProfileManager() {
       const response = await getVehicleProfiles();
       setProfiles(response.items);
     } catch (fetchError) {
-      setError(fetchError instanceof Error ? fetchError.message : "Unable to load profiles");
+      setError(fetchError instanceof Error ? fetchError.message : loadProfilesError(locale));
     } finally {
       setLoading(false);
     }
@@ -68,7 +70,7 @@ export function ProfileManager() {
       setIsDefault(false);
       await loadProfiles();
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : "Unable to create profile");
+      setError(fetchErrorMessage(createError, locale, "create"));
     } finally {
       setSubmitting(false);
     }
@@ -80,39 +82,39 @@ export function ProfileManager() {
       await deleteVehicleProfile(profileId);
       await loadProfiles();
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete profile");
+      setError(fetchErrorMessage(deleteError, locale, "delete"));
     }
   }
 
   return (
     <View style={styles.container}>
       <View style={styles.formPanel}>
-        <Text style={styles.heading}>Vehicle Profiles</Text>
+        <Text style={styles.heading}>{t("vehicleProfiles")}</Text>
         <Text style={styles.subheading}>
-          These profiles personalize recommendation defaults for fuel and service mode.
+          {t("profileManagerSubtitle")}
         </Text>
 
-        <Field label="Profile Name" value={name} onChangeText={setName} />
-        <Field label="Consumption (L/100Km)" value={consumption} onChangeText={setConsumption} />
-        <Field label="Tank Capacity (Liters)" value={tankCapacity} onChangeText={setTankCapacity} />
+        <Field label={t("profileName")} value={name} onChangeText={setName} />
+        <Field label={t("consumption")} value={consumption} onChangeText={setConsumption} />
+        <Field label={t("tankCapacity")} value={tankCapacity} onChangeText={setTankCapacity} />
 
-        <Text style={styles.label}>Fuel Type</Text>
+        <Text style={styles.label}>{t("fuelType")}</Text>
         <View style={styles.chipRow}>
           {FUEL_OPTIONS.map((option) => (
-            <Chip key={option} label={option} active={fuelType === option} onPress={() => setFuelType(option)} />
+            <Chip key={option} label={translateFuelType(locale, option)} active={fuelType === option} onPress={() => setFuelType(option)} />
           ))}
         </View>
 
-        <Text style={styles.label}>Preferred Service Mode</Text>
+        <Text style={styles.label}>{t("preferredServiceMode")}</Text>
         <View style={styles.chipRow}>
           {SERVICE_OPTIONS.map((option) => (
-            <Chip key={option} label={option} active={serviceMode === option} onPress={() => setServiceMode(option)} />
+            <Chip key={option} label={translateServiceMode(locale, option)} active={serviceMode === option} onPress={() => setServiceMode(option)} />
           ))}
         </View>
 
         <Pressable style={[styles.toggle, isDefault && styles.toggleActive]} onPress={() => setIsDefault((value) => !value)}>
           <Text style={[styles.toggleText, isDefault && styles.toggleTextActive]}>
-            {isDefault ? "Will Become Default" : "Create as Secondary Profile"}
+            {isDefault ? t("willBecomeDefault") : t("createAsSecondaryProfile")}
           </Text>
         </Pressable>
 
@@ -121,7 +123,7 @@ export function ProfileManager() {
           onPress={() => void handleCreate()}
           disabled={!name.trim() || submitting}
         >
-          <Text style={styles.ctaText}>{submitting ? "Creating…" : "Create Vehicle Profile"}</Text>
+          <Text style={styles.ctaText}>{submitting ? t("creating") : t("createVehicleProfile")}</Text>
         </Pressable>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -129,12 +131,12 @@ export function ProfileManager() {
 
       <View style={styles.listPanel}>
         <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>Saved Profiles</Text>
+          <Text style={styles.listTitle}>{t("savedProfiles")}</Text>
           {loading ? <ActivityIndicator color={colors.primary} /> : null}
         </View>
 
         {profiles.length === 0 && !loading ? (
-          <Text style={styles.empty}>No Saved Profiles Yet.</Text>
+          <Text style={styles.empty}>{t("noSavedProfilesYet")}</Text>
         ) : null}
 
         <View style={styles.list}>
@@ -143,13 +145,13 @@ export function ProfileManager() {
               <View style={styles.profileMeta}>
                 <Text style={styles.profileName}>{profile.name}</Text>
                 <Text style={styles.profileDetail}>
-                  {profile.fuel_type} · {profile.preferred_service_mode} · {profile.avg_consumption_l_per_100km} l/100km
+                  {translateFuelType(locale, profile.fuel_type)} · {translateServiceMode(locale, profile.preferred_service_mode)} · {profile.avg_consumption_l_per_100km} l/100km
                 </Text>
               </View>
               <View style={styles.profileActions}>
-                {profile.is_default ? <Text style={styles.defaultBadge}>Default</Text> : null}
+                {profile.is_default ? <Text style={styles.defaultBadge}>{t("default")}</Text> : null}
                 <Pressable style={styles.deleteButton} onPress={() => void handleDelete(profile.id)}>
-                  <Text style={styles.deleteText}>Delete</Text>
+                  <Text style={styles.deleteText}>{t("delete")}</Text>
                 </Pressable>
               </View>
             </View>
@@ -158,6 +160,20 @@ export function ProfileManager() {
       </View>
     </View>
   );
+}
+
+function fetchErrorMessage(error: unknown, locale: "en" | "it", action: "create" | "delete") {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (locale === "it") {
+    return action === "create" ? "Impossibile creare il profilo" : "Impossibile eliminare il profilo";
+  }
+  return action === "create" ? "Unable to create profile" : "Unable to delete profile";
+}
+
+function loadProfilesError(locale: "en" | "it") {
+  return locale === "it" ? "Impossibile caricare i profili" : "Unable to load profiles";
 }
 
 function Field({

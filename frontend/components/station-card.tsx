@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { translateFreshness, translateFuelType, translateServiceMode, useI18n } from "../lib/i18n";
 import type { NearbyStationItem } from "../lib/types";
 import { colors, elevation, radius, spacing, typography } from "../theme";
 
@@ -18,6 +19,8 @@ export function StationCard({
   onPressIn?: () => void;
   onOpen?: () => void;
 }) {
+  const { t, locale } = useI18n();
+
   return (
     <Pressable
       style={[styles.card, selected && styles.cardSelected]}
@@ -28,26 +31,28 @@ export function StationCard({
     >
       <View style={styles.header}>
         <View style={styles.identity}>
-          <Text style={styles.name}>{station.name ?? "Unnamed Station"}</Text>
+          <Text style={styles.name}>{station.name ?? t("unnamedStation")}</Text>
           <Text style={styles.meta}>
             {[station.brand, station.comune, station.provincia].filter(Boolean).join(" · ")}
           </Text>
         </View>
         <View style={styles.badges}>
           <Text style={styles.distance}>{Math.round(station.distance_meters)} m</Text>
-          <Text style={styles.freshness}>{station.freshness_status}</Text>
+          <Text style={styles.freshness}>{translateFreshness(locale, station.freshness_status)}</Text>
         </View>
       </View>
 
-      <Text style={styles.address}>{station.address ?? "No Address Available"}</Text>
+      <Text style={styles.address}>{station.address ?? t("noAddressAvailable")}</Text>
 
       <View style={styles.priceRow}>
         <View>
           <Text style={styles.priceLabel}>
-            {[station.selected_fuel_type, station.selected_service_mode].filter(Boolean).join(" · ") || "No Price"}
+            {station.selected_fuel_type && station.selected_service_mode
+              ? `${translateFuelType(locale, station.selected_fuel_type)} · ${translateServiceMode(locale, station.selected_service_mode)}`
+              : t("noPrice")}
           </Text>
           <Text style={styles.priceValue}>
-            {station.current_price ? `€${station.current_price}` : "Price Unavailable"}
+            {station.current_price ? `€${station.current_price}` : t("priceUnavailable")}
           </Text>
         </View>
         {station.score !== null && station.score !== undefined ? (

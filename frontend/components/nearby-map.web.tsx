@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import maplibre from "maplibre-gl";
 import { StyleSheet, Text, View } from "react-native";
 
+import { Locale, translateFuelType, useI18n } from "../lib/i18n";
 import type { FuelType, NearbyStationItem, StationDetail } from "../lib/types";
 import { colors, radius, spacing, typography } from "../theme";
 
@@ -54,6 +55,7 @@ export function NearbyMap({
   stationPreviews,
   onViewportChange,
 }: NearbyMapProps) {
+  const { locale, t } = useI18n();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const mapLoadedRef = useRef(false);
@@ -171,7 +173,11 @@ export function NearbyMap({
     }
 
     for (const station of stations) {
-      const element = createMarkerElement(station, station.id === selectedStationId);
+      const element = createMarkerElement(
+        station,
+        station.id === selectedStationId,
+        t("stationMarker"),
+      );
       element.onclick = () => {
         onSelectStation(station.id);
         onOpenStation(station.id);
@@ -185,6 +191,10 @@ export function NearbyMap({
           popupRef,
           station,
           detail: stationPreviews[station.id],
+          locale,
+          loadingLabel: t("loadingPrices"),
+          emptyLabel: t("noPricesAvailable"),
+          unnamedLabel: t("unnamedStation"),
         });
       };
       element.onmouseleave = () => {
@@ -236,7 +246,7 @@ export function NearbyMap({
       return;
     }
 
-    const element = createCurrentLocationElement();
+    const element = createCurrentLocationElement(t("yourPosition"));
     const marker = new maplibre.Marker({ element, anchor: "center" })
       .setLngLat([currentUserLocation.lon, currentUserLocation.lat])
       .addTo(map);
@@ -245,7 +255,7 @@ export function NearbyMap({
       currentLocationMarkerRef.current.remove();
     }
     currentLocationMarkerRef.current = marker;
-  }, [currentUserLocation, mapReady]);
+  }, [currentUserLocation, mapReady, t]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -262,28 +272,34 @@ export function NearbyMap({
       popupRef,
       station,
       detail: stationPreviews[hoveredStationId],
+      locale,
+      loadingLabel: t("loadingPrices"),
+      emptyLabel: t("noPricesAvailable"),
+      unnamedLabel: t("unnamedStation"),
     });
-  }, [stationPreviews, stations]);
+  }, [stationPreviews, stations, locale, t]);
 
   return (
     <View style={styles.wrapper}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>Map view</Text>
+          <Text style={styles.title}>{t("mapView")}</Text>
           <Text style={styles.subtitle}>
-            {stations.length} station{stations.length === 1 ? "" : "s"} in the selected area
+            {stations.length} {t("stationsInAreaCount")}
           </Text>
         </View>
-        <Text style={styles.distanceBadge}>{Math.round(radiusMeters / 100) / 10} km range</Text>
+        <Text style={styles.distanceBadge}>
+          {Math.round(radiusMeters / 100) / 10} {t("kmRange")}
+        </Text>
       </View>
       <View style={styles.legend}>
-        <LegendItem label="You" swatchStyle={styles.userLegendDot} />
-        <LegendItem label="Benzina" swatchStyle={[styles.fuelLegendDot, { backgroundColor: "#c25a2a" }]} />
-        <LegendItem label="Diesel" swatchStyle={[styles.fuelLegendDot, { backgroundColor: "#1f4b99" }]} />
-        <LegendItem label="GPL" swatchStyle={[styles.fuelLegendDot, { backgroundColor: "#7c3aed" }]} />
-        <LegendItem label="Metano" swatchStyle={[styles.fuelLegendDot, { backgroundColor: "#15803d" }]} />
-        <LegendItem label="GNL" swatchStyle={[styles.fuelLegendDot, { backgroundColor: "#0f766e" }]} />
-        <LegendItem label="HVO" swatchStyle={[styles.fuelLegendDot, { backgroundColor: "#3f7d20" }]} />
+        <LegendItem label={t("you")} swatchStyle={styles.userLegendDot} />
+        <LegendItem label={translateFuelType(locale, "benzina")} swatchStyle={[styles.fuelLegendDot, { backgroundColor: "#c25a2a" }]} />
+        <LegendItem label={translateFuelType(locale, "diesel")} swatchStyle={[styles.fuelLegendDot, { backgroundColor: "#1f4b99" }]} />
+        <LegendItem label={translateFuelType(locale, "gpl")} swatchStyle={[styles.fuelLegendDot, { backgroundColor: "#7c3aed" }]} />
+        <LegendItem label={translateFuelType(locale, "metano")} swatchStyle={[styles.fuelLegendDot, { backgroundColor: "#15803d" }]} />
+        <LegendItem label={translateFuelType(locale, "gnl")} swatchStyle={[styles.fuelLegendDot, { backgroundColor: "#0f766e" }]} />
+        <LegendItem label={translateFuelType(locale, "hvo")} swatchStyle={[styles.fuelLegendDot, { backgroundColor: "#3f7d20" }]} />
       </View>
       <div ref={containerRef} style={mapContainerStyle} />
     </View>
@@ -341,11 +357,11 @@ function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number)
   return earthRadius * c;
 }
 
-function createMarkerElement(station: NearbyStationItem, selected: boolean) {
+function createMarkerElement(station: NearbyStationItem, selected: boolean, stationMarkerLabel: string) {
   const fuelMeta = fuelMarkerMeta(station.selected_fuel_type);
   const element = document.createElement("button");
   element.type = "button";
-  element.setAttribute("aria-label", station.name ?? "station marker");
+  element.setAttribute("aria-label", station.name ?? stationMarkerLabel);
   element.style.display = "flex";
   element.style.alignItems = "center";
   element.style.justifyContent = "center";
@@ -367,9 +383,9 @@ function createMarkerElement(station: NearbyStationItem, selected: boolean) {
   return element;
 }
 
-function createCurrentLocationElement() {
+function createCurrentLocationElement(yourPositionLabel: string) {
   const element = document.createElement("div");
-  element.setAttribute("aria-label", "your position");
+  element.setAttribute("aria-label", yourPositionLabel);
   element.style.width = "34px";
   element.style.height = "34px";
   element.style.borderRadius = "999px";
@@ -394,11 +410,19 @@ function showStationPopup({
   popupRef,
   station,
   detail,
+  locale,
+  loadingLabel,
+  emptyLabel,
+  unnamedLabel,
 }: {
   map: any;
   popupRef: React.MutableRefObject<any>;
   station: NearbyStationItem;
   detail: StationDetail | undefined;
+  locale: Locale;
+  loadingLabel: string;
+  emptyLabel: string;
+  unnamedLabel: string;
 }) {
   if (popupRef.current) {
     popupRef.current.remove();
@@ -414,7 +438,7 @@ function showStationPopup({
   title.style.fontWeight = "800";
   title.style.fontSize = "12px";
   title.style.color = "#173528";
-  title.textContent = station.name ?? "Unnamed station";
+  title.textContent = station.name ?? unnamedLabel;
   popupElement.appendChild(title);
 
   const priceGrid = document.createElement("div");
@@ -426,14 +450,14 @@ function showStationPopup({
     const loading = document.createElement("div");
     loading.style.fontSize = "10px";
     loading.style.color = "#6f786f";
-    loading.textContent = "Loading prices…";
+    loading.textContent = loadingLabel;
     priceGrid.appendChild(loading);
   } else if (detail.prices.length > 0) {
     detail.prices.forEach((price) => {
       const label = document.createElement("div");
       label.style.fontSize = "10px";
       label.style.color = "#4b5c54";
-      label.textContent = `${shortFuelLabel(price.fuel_type)} · ${price.service_mode}`;
+      label.textContent = `${shortFuelLabel(locale, price.fuel_type)} · ${price.service_mode}`;
 
       const value = document.createElement("div");
       value.style.fontSize = "10px";
@@ -448,7 +472,7 @@ function showStationPopup({
     const empty = document.createElement("div");
     empty.style.fontSize = "10px";
     empty.style.color = "#6f786f";
-    empty.textContent = "No prices available";
+    empty.textContent = emptyLabel;
     priceGrid.appendChild(empty);
   }
 
@@ -463,23 +487,8 @@ function showStationPopup({
     .addTo(map);
 }
 
-function shortFuelLabel(fuelType: FuelType) {
-  switch (fuelType) {
-    case "benzina":
-      return "Benzina";
-    case "diesel":
-      return "Diesel";
-    case "gpl":
-      return "GPL";
-    case "metano":
-      return "Metano";
-    case "gnl":
-      return "GNL";
-    case "hvo":
-      return "HVO";
-    default:
-      return fuelType;
-  }
+function shortFuelLabel(locale: Locale, fuelType: FuelType) {
+  return translateFuelType(locale, fuelType);
 }
 
 function fuelMarkerMeta(fuelType: FuelType | null) {

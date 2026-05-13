@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 
+import { useI18n } from "../lib/i18n";
 import type { NearbyStationItem, StationDetail } from "../lib/types";
 
 export function NearbyMap({
@@ -17,13 +18,17 @@ export function NearbyMap({
   stationPreviews: Record<number, StationDetail | undefined>;
   onViewportChange: (viewport: { lat: number; lon: number; radiusMeters: number }) => void;
 }) {
+  const { t } = useI18n();
+
   return (
     <View style={styles.placeholder}>
-      <Text style={styles.title}>Map preview</Text>
+      <Text style={styles.title}>{t("nativeMapPreview")}</Text>
       <Text style={styles.body}>
-        Native map support will be added later. The web app currently uses a web-only MapLibre implementation.
+        {t("nativeMapPlaceholder")}
       </Text>
-      <Text style={styles.count}>{stations.length} stations in the selected area</Text>
+      <Text style={styles.count}>
+        {stations.length} {t("stationsInAreaCount")}
+      </Text>
     </View>
   );
 }

@@ -4,10 +4,12 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import { AppShell } from "../../components/shell";
 import { getStationDetail } from "../../lib/api";
+import { translateFreshness, translateFuelType, translateServiceMode, useI18n } from "../../lib/i18n";
 import type { StationDetail } from "../../lib/types";
 import { colors, radius, spacing, typography } from "../../theme";
 
 export default function StationDetailScreen() {
+  const { t, locale } = useI18n();
   const { stationId } = useLocalSearchParams<{ stationId: string | string[] }>();
   const [detail, setDetail] = useState<StationDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -18,7 +20,7 @@ export default function StationDetailScreen() {
     if (!resolvedStationId) {
       setLoading(false);
       setDetail(null);
-      setError("Missing station id");
+      setError(t("missingStationId"));
       return;
     }
     setLoading(true);
@@ -27,35 +29,35 @@ export default function StationDetailScreen() {
       .then((response) => setDetail(response))
       .catch((fetchError) => {
         setDetail(null);
-        setError(fetchError instanceof Error ? fetchError.message : "Unable to load station");
+        setError(fetchError instanceof Error ? fetchError.message : t("unableToLoadStation"));
       })
       .finally(() => setLoading(false));
-  }, [stationId]);
+  }, [stationId, t]);
 
   return (
     <AppShell
-      title="Station detail"
-      subtitle="See all current prices and freshness data before you decide where to stop."
+      title={t("stationDetail")}
+      subtitle={t("stationDetailSubtitle")}
     >
       <View style={styles.container}>
         {loading ? <ActivityIndicator color={colors.primary} /> : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {detail ? (
           <View style={styles.card}>
-            <Text style={styles.name}>{detail.name ?? "Unnamed station"}</Text>
+            <Text style={styles.name}>{detail.name ?? t("unnamedStation")}</Text>
             <Text style={styles.meta}>
               {[detail.brand, detail.address, detail.comune, detail.provincia].filter(Boolean).join(" · ")}
             </Text>
-            <Text style={styles.status}>Freshness: {detail.freshness_status}</Text>
+            <Text style={styles.status}>{t("freshness")}: {translateFreshness(locale, detail.freshness_status)}</Text>
 
             <View style={styles.priceList}>
               {detail.prices.map((price) => (
                 <View key={`${price.fuel_type}-${price.service_mode}`} style={styles.priceRow}>
                   <View>
                     <Text style={styles.priceKey}>
-                      {price.fuel_type} · {price.service_mode}
+                      {translateFuelType(locale, price.fuel_type)} · {translateServiceMode(locale, price.service_mode)}
                     </Text>
-                    <Text style={styles.timestamp}>{price.price_effective_at ?? "No timestamp"}</Text>
+                    <Text style={styles.timestamp}>{price.price_effective_at ?? t("noTimestamp")}</Text>
                   </View>
                   <Text style={styles.priceValue}>€{price.price}</Text>
                 </View>

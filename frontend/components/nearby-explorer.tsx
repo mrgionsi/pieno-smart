@@ -12,6 +12,7 @@ import {
 } from "react-native";
 
 import { searchNearby, getVehicleProfiles, getStationDetail } from "../lib/api";
+import { translateFuelType, translateServiceMode, translateSort, useI18n } from "../lib/i18n";
 import { reverseItalianPlace, searchItalianPlaces } from "../lib/places";
 import type {
   FuelType,
@@ -32,6 +33,7 @@ const FUEL_OPTIONS: FuelType[] = ["benzina", "diesel", "gpl", "metano", "gnl", "
 const SERVICE_OPTIONS: Array<ServiceMode | ""> = ["", "self", "servito"];
 
 export function NearbyExplorer() {
+  const { t, locale } = useI18n();
   const [lat, setLat] = useState("41.0586");
   const [lon, setLon] = useState("14.3027");
   const [locationQuery, setLocationQuery] = useState("Recale, CE");
@@ -161,7 +163,7 @@ export function NearbyExplorer() {
       }
       setResults([]);
       setSelectedStationId(null);
-      setError(fetchError instanceof Error ? fetchError.message : "Search Failed");
+      setError(fetchError instanceof Error ? fetchError.message : t("searchFailed"));
     } finally {
       if (requestId === searchRequestIdRef.current) {
         setLoading(false);
@@ -225,7 +227,7 @@ export function NearbyExplorer() {
       }
     } catch (fetchError) {
       if (stationDetailRequestIdRef.current === requestId) {
-        setStationDetailError(fetchError instanceof Error ? fetchError.message : "Unable To Load Station");
+        setStationDetailError(fetchError instanceof Error ? fetchError.message : t("unableToLoadStation"));
       }
     } finally {
       if (stationDetailRequestIdRef.current === requestId) {
@@ -246,12 +248,12 @@ export function NearbyExplorer() {
     try {
       const suggestions = await searchItalianPlaces(normalizedQuery);
       if (!suggestions.length) {
-        setError("Select A Suggested Place Before Refreshing The Map.");
+        setError(t("selectSuggestedPlace"));
         return;
       }
       await applyPlaceSuggestion(suggestions[0]);
     } catch (lookupError) {
-      setError(lookupError instanceof Error ? lookupError.message : "Unable To Resolve The Typed Location");
+      setError(lookupError instanceof Error ? lookupError.message : t("unableToResolveTypedLocation"));
     } finally {
       setSearchingPlaces(false);
     }
@@ -259,7 +261,7 @@ export function NearbyExplorer() {
 
   async function useBrowserLocation() {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setError("Geolocation Is Not Available In This Browser");
+      setError(t("geolocationUnavailable"));
       return;
     }
 
@@ -279,12 +281,12 @@ export function NearbyExplorer() {
         void (async () => {
           try {
             const place = await reverseItalianPlace(nextLatitude, nextLongitude);
-            const nextLabel = place?.label ?? "Current location";
+            const nextLabel = place?.label ?? t("currentLocation");
             setLocationQuery(nextLabel);
             setSelectedLocationLabel(nextLabel);
           } catch {
-            setLocationQuery("Current location");
-            setSelectedLocationLabel("Current location");
+            setLocationQuery(t("currentLocation"));
+            setSelectedLocationLabel(t("currentLocation"));
           } finally {
             await runSearch({ lat: nextLat, lon: nextLon });
             setLocatingUser(false);
@@ -293,7 +295,7 @@ export function NearbyExplorer() {
       },
       (geoError) => {
         setLocatingUser(false);
-        setError(geoError.message || "Unable To Get Your Current Location");
+        setError(geoError.message || t("unableToGetCurrentLocation"));
       },
       {
         enableHighAccuracy: true,
@@ -320,15 +322,15 @@ export function NearbyExplorer() {
                     value={locationQuery}
                     onChangeText={setLocationQuery}
                     style={styles.input}
-                    placeholder="Search City Or Street"
+                    placeholder={t("searchPlaceholder")}
                     placeholderTextColor="#8b8f88"
                   />
                 </View>
                 {selectedLocationLabel ? (
-                  <Text style={styles.locationHint}>Area: {selectedLocationLabel}</Text>
+                  <Text style={styles.locationHint}>{t("area")}: {selectedLocationLabel}</Text>
                 ) : null}
-                <Text style={styles.searchHelper}>Example: Via Roma, Napoli</Text>
-                {searchingPlaces ? <Text style={styles.searchingHint}>Searching Places…</Text> : null}
+                <Text style={styles.searchHelper}>{t("searchExample")}</Text>
+                {searchingPlaces ? <Text style={styles.searchingHint}>{t("searchingPlaces")}</Text> : null}
                 {placeSuggestions.length > 0 ? (
                   <View style={styles.suggestionsPanel}>
                     {placeSuggestions.map((place) => (
@@ -354,13 +356,13 @@ export function NearbyExplorer() {
           <View style={[styles.compactFilter, !(width >= 1180) && isToolbarLayout && styles.compactFilterWide]}>
             <View style={styles.compactFilterHeader}>
               <Text style={styles.compactFilterIcon}>⇅</Text>
-              <Text style={styles.compactFilterLabel}>Sort</Text>
+              <Text style={styles.compactFilterLabel}>{t("sort")}</Text>
               <Pressable
                 style={styles.sortInfoButton}
                 onPress={() => setShowSortInfo((value) => !value)}
                 accessibilityRole="button"
-                accessibilityLabel="Explain Sort Options"
-                accessibilityHint="Shows Or Hides An Explanation For Each Sort Mode"
+                accessibilityLabel={t("explainSortOptions")}
+                accessibilityHint={t("explainSortOptionsHint")}
                 accessibilityState={{ expanded: showSortInfo }}
               >
                 <Text style={styles.sortInfoButtonText}>ⓘ</Text>
@@ -368,30 +370,30 @@ export function NearbyExplorer() {
             </View>
             <View style={styles.compactFilterOptions}>
               {SORT_OPTIONS.map((option) => (
-                <Chip key={option} label={titleCase(option)} active={sort === option} onPress={() => setSort(option)} />
+                <Chip key={option} label={translateSort(locale, option)} active={sort === option} onPress={() => setSort(option)} />
               ))}
             </View>
             {showSortInfo ? (
               <View style={styles.sortInfoPanel}>
                 <Text style={styles.sortInfoLine}>
-                  <Text style={styles.sortInfoTitle}>Distance:</Text> Shows The Nearest Stations First.
+                  <Text style={styles.sortInfoTitle}>{translateSort(locale, "distance")}:</Text> {t("distanceDesc")}
                 </Text>
                 <Text style={styles.sortInfoLine}>
-                  <Text style={styles.sortInfoTitle}>Price:</Text> Shows The Lowest Matching Fuel Price First.
+                  <Text style={styles.sortInfoTitle}>{translateSort(locale, "price")}:</Text> {t("priceDesc")}
                 </Text>
                 <Text style={styles.sortInfoLine}>
-                  <Text style={styles.sortInfoTitle}>Convenience:</Text> Prioritizes The Best Overall Choice Using Distance, Price, Freshness, And Practicality.
+                  <Text style={styles.sortInfoTitle}>{translateSort(locale, "convenience")}:</Text> {t("convenienceDesc")}
                 </Text>
               </View>
             ) : null}
           </View>
 
           {!vehicleProfileId ? (
-            <CompactFilter label="Fuel" icon="⛽" wide={!(width >= 1180) && isToolbarLayout}>
+            <CompactFilter label={t("fuel")} icon="⛽" wide={!(width >= 1180) && isToolbarLayout}>
               {FUEL_OPTIONS.map((option) => (
                 <Chip
                   key={option}
-                  label={fuelOptionLabel(option)}
+                  label={fuelOptionLabel(option, locale)}
                   active={fuelType === option}
                   onPress={() => setFuelType(option)}
                 />
@@ -405,16 +407,16 @@ export function NearbyExplorer() {
           >
             <Text style={styles.moreFiltersButtonIcon}>{showAdvancedFilters ? "▴" : "▾"}</Text>
               <Text style={styles.moreFiltersButtonText}>
-                {showAdvancedFilters ? "Hide Filters" : "More Filters"}
+                {showAdvancedFilters ? t("hideFilters") : t("moreFilters")}
               </Text>
           </Pressable>
             </View>
 
             {showAdvancedFilters ? (
               <View style={styles.advancedFilters}>
-            <FilterRow label="Vehicle profile" icon="◫">
+            <FilterRow label={t("vehicleProfile")} icon="◫">
               <Chip
-                    label="Manual Filters"
+                    label={t("manualFilters")}
                 active={!vehicleProfileId}
                 stretch
                 onPress={() => setVehicleProfileId("")}
@@ -433,15 +435,15 @@ export function NearbyExplorer() {
             {vehicleProfileId && selectedProfile ? (
               <View style={styles.profileHint}>
                 <Text style={styles.profileHintText}>
-                  Using profile defaults: {selectedProfile.fuel_type} · {selectedProfile.preferred_service_mode}
+                  {t("usingProfileDefaults")}: {translateFuelType(locale, selectedProfile.fuel_type)} · {translateServiceMode(locale, selectedProfile.preferred_service_mode)}
                 </Text>
               </View>
             ) : (
-              <FilterRow label="Service mode" icon="⚙">
+              <FilterRow label={t("serviceMode")} icon="⚙">
                 {SERVICE_OPTIONS.map((option) => (
                       <Chip
                         key={option || "any"}
-                        label={option ? titleCase(option) : "Any"}
+                        label={translateServiceMode(locale, option)}
                         stretch
                         active={serviceMode === option}
                         onPress={() => setServiceMode(option)}
@@ -451,7 +453,7 @@ export function NearbyExplorer() {
             )}
 
             {!vehicleProfileId ? (
-                  <Text style={styles.viewportHint}>Move Or Zoom The Map To Change The Search Area.</Text>
+                  <Text style={styles.viewportHint}>{t("viewportHint")}</Text>
             ) : null}
               </View>
             ) : null}
@@ -463,35 +465,35 @@ export function NearbyExplorer() {
             disabled={locatingUser}
           >
             <Text style={styles.secondaryButtonIcon}>◎</Text>
-            <Text style={styles.secondaryButtonText}>{locatingUser ? "Locating…" : "Use My Location"}</Text>
+            <Text style={styles.secondaryButtonText}>{locatingUser ? t("locating") : t("useMyLocation")}</Text>
           </Pressable>
 
           <Pressable style={styles.primaryButton} onPress={() => void resolveQueryAndSearch()}>
             <Text style={styles.primaryButtonIcon}>↻</Text>
-            <Text style={styles.primaryButtonText}>Search</Text>
+            <Text style={styles.primaryButtonText}>{t("search")}</Text>
           </Pressable>
             </View>
           </View>
 
           {width >= 1180 ? (
             <View style={styles.summaryPanel}>
-              <Text style={styles.summaryEyebrow}>Search Summary</Text>
+              <Text style={styles.summaryEyebrow}>{t("searchSummary")}</Text>
               <Text style={styles.summaryLine}>
-                Area: <Text style={styles.summaryValue}>{selectedLocationLabel || "Not Selected"}</Text>
+                {t("area")}: <Text style={styles.summaryValue}>{selectedLocationLabel || t("notSelected")}</Text>
               </Text>
               <Text style={styles.summaryLine}>
-                Sort: <Text style={styles.summaryValue}>{titleCase(sort)}</Text>
+                {t("sort")}: <Text style={styles.summaryValue}>{translateSort(locale, sort)}</Text>
               </Text>
               <Text style={styles.summaryLine}>
-                Fuel: <Text style={styles.summaryValue}>{vehicleProfileId ? titleCase(selectedProfile?.fuel_type ?? "profile") : titleCase(fuelType)}</Text>
+                {t("fuel")}: <Text style={styles.summaryValue}>{vehicleProfileId ? translateFuelType(locale, selectedProfile?.fuel_type ?? fuelType) : translateFuelType(locale, fuelType)}</Text>
               </Text>
               <Text style={styles.summaryLine}>
-                Mode: <Text style={styles.summaryValue}>{vehicleProfileId ? titleCase(selectedProfile?.preferred_service_mode ?? "profile") : titleCase(serviceMode || "any")}</Text>
+                {t("serviceMode")}: <Text style={styles.summaryValue}>{vehicleProfileId ? translateServiceMode(locale, selectedProfile?.preferred_service_mode ?? serviceMode) : translateServiceMode(locale, serviceMode)}</Text>
               </Text>
               <Text style={styles.summaryLine}>
-                Results: <Text style={styles.summaryValue}>{results.length}</Text>
+                {t("results")}: <Text style={styles.summaryValue}>{results.length}</Text>
               </Text>
-              <Text style={styles.summaryHint}>Use The Filters On The Left, Then Compare Results In The Map And List Below.</Text>
+              <Text style={styles.summaryHint}>{t("summaryHint")}</Text>
             </View>
           ) : null}
         </View>
@@ -503,14 +505,14 @@ export function NearbyExplorer() {
 
       <View style={styles.resultsPanel}>
         <View style={styles.resultsHeader}>
-          <Text style={styles.resultsTitle}>Nearby Stations</Text>
+          <Text style={styles.resultsTitle}>{t("nearbyStations")}</Text>
           {loading ? <ActivityIndicator color={colors.primary} /> : null}
         </View>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         {results.length === 0 && !loading && !error ? (
-          <Text style={styles.empty}>Run A Search To See Nearby Stations And Convenience Suggestions.</Text>
+          <Text style={styles.empty}>{t("nearbyEmpty")}</Text>
         ) : null}
 
         <View style={[styles.discoveryLayout, isWideLayout && styles.discoveryLayoutWide]}>
@@ -531,7 +533,7 @@ export function NearbyExplorer() {
           </View>
 
           <View style={[styles.listPanel, isWideLayout && styles.listPanelWide]}>
-            <Text style={styles.listLabel}>Stations In The Selected Area</Text>
+            <Text style={styles.listLabel}>{t("stationsInSelectedArea")}</Text>
             <View style={styles.resultsList}>
               {results.map((station) => (
                 <StationCard
@@ -629,22 +631,22 @@ function CompactFilter({
   );
 }
 
-function fuelOptionLabel(fuelType: FuelType) {
+function fuelOptionLabel(fuelType: FuelType, locale: ReturnType<typeof useI18n>["locale"]) {
   switch (fuelType) {
     case "benzina":
-      return "⛽ Benzina";
+      return `⛽ ${translateFuelType(locale, fuelType)}`;
     case "diesel":
-      return "🛢 Diesel";
+      return `🛢 ${translateFuelType(locale, fuelType)}`;
     case "gpl":
-      return "🔥 Gpl";
+      return `🔥 ${translateFuelType(locale, fuelType)}`;
     case "metano":
-      return "🍃 Metano";
+      return `🍃 ${translateFuelType(locale, fuelType)}`;
     case "gnl":
-      return "💨 Gnl";
+      return `💨 ${translateFuelType(locale, fuelType)}`;
     case "hvo":
-      return "🌿 Hvo";
+      return `🌿 ${translateFuelType(locale, fuelType)}`;
     default:
-      return titleCase(fuelType);
+      return translateFuelType(locale, fuelType);
   }
 }
 
