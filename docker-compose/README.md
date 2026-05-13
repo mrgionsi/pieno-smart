@@ -53,9 +53,10 @@ curl http://localhost:8000/api/docs # Backend API
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `DB_USER` | `postgres` | PostgreSQL database user |
 | `DB_PASSWORD` | `postgres` | PostgreSQL database password |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | Allowed CORS origins (comma-separated) |
-| `FRONTEND_API_BASE_URL` | `http://localhost:8000/api` | API endpoint for frontend |
+| `FRONTEND_API_BASE_URL` | `/api` | Browser-facing API base path for the frontend |
 | `DEV_USER_EMAIL` | `demo@pienosmart.local` | Development user email |
 | `DEV_USER_DISPLAY_NAME` | `Demo User` | Development user display name |
 | `DEV_USER_SUBJECT` | `dev-local-user` | Development user subject |
@@ -121,8 +122,22 @@ docker-compose -f docker-compose/docker-compose.preprod.basic.yml ps
 1. **Database connection fails**
    ```bash
    # Check database health
-   docker-compose -f docker-compose/docker-compose.preprod.basic.yml exec db pg_isready -U postgres -d pienosmart
+   docker-compose -f docker-compose/docker-compose.preprod.basic.yml exec db pg_isready -U "${DB_USER:-postgres}" -d pienosmart
    ```
+
+   If you are using PostgreSQL / PostGIS 18 images, make sure the database volume is mounted at:
+
+   ```text
+   /var/lib/postgresql
+   ```
+
+   and not at the older path:
+
+   ```text
+   /var/lib/postgresql/data
+   ```
+
+   If an existing environment was already initialized with the old mount layout, you will need a one-time data migration or volume reset before the updated stack will start cleanly.
 
 2. **Backend can't connect to database**
    - Verify `DB_PASSWORD` environment variable

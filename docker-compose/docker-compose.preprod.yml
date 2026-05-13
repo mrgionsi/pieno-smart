@@ -12,14 +12,14 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_DB: pienosmart
-      POSTGRES_USER: postgres
+      POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
     ports:
       - "5432:5432"
     volumes:
-      - pienosmart_preprod_pgdata:/var/lib/postgresql/data
+      - pienosmart_preprod_pgdata:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d pienosmart"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d pienosmart"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -37,7 +37,7 @@ services:
       TZ: Europe/Rome
 
       # Database connection
-      DATABASE_URL: postgresql+psycopg://postgres:${DB_PASSWORD:-postgres}@db:5432/pienosmart
+      DATABASE_URL: postgresql+psycopg://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/pienosmart
 
       # Application settings
       APP_ENV: staging
@@ -76,7 +76,7 @@ services:
     restart: unless-stopped
     environment:
       # API endpoint for frontend
-      EXPO_PUBLIC_API_BASE_URL: ${FRONTEND_API_BASE_URL:-http://backend:8000/api}
+      EXPO_PUBLIC_API_BASE_URL: ${FRONTEND_API_BASE_URL:-/api}
 
       # Development user settings (for testing)
       EXPO_PUBLIC_DEV_USER_EMAIL: ${DEV_USER_EMAIL:-demo@pienosmart.local}
