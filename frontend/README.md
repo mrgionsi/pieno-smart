@@ -39,7 +39,8 @@ The app expects the backend API at:
 
 Default:
 
-- `/api`
+- local Expo web dev: `http://localhost:8000/api`
+- containerized/deployed frontend: `/api`
 
 In containerized deployments, the frontend Nginx server should proxy `/api` to the backend service.
 

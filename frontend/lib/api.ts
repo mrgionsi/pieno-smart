@@ -5,7 +5,25 @@ import type {
   VehicleProfileListResponse,
 } from "@/lib/types";
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? "/api";
+function resolveApiBaseUrl() {
+  const configured = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+  if (typeof window !== "undefined") {
+    const { hostname, protocol } = window.location;
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+      if (!configured || configured.startsWith("/")) {
+        return `${protocol}//${hostname}:8000/api`;
+      }
+    }
+  }
+
+  if (configured) {
+    return configured;
+  }
+
+  return "/api";
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 function buildHeaders(needsUserContext = false): HeadersInit {
   if (!needsUserContext) {
@@ -35,6 +53,14 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     const text = await response.text();
     throw new Error(text || `Request failed with status ${response.status}`);
+  }
+
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    const text = await response.text();
+    throw new Error(
+      `Expected JSON from ${API_BASE_URL}${path}, received ${contentType || "unknown content type"}: ${text.slice(0, 120)}`,
+    );
   }
 
   return response.json() as Promise<T>;
