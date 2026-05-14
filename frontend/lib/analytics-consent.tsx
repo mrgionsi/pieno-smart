@@ -24,11 +24,14 @@ const STORAGE_KEY = "pienosmart.analytics-consent.v1";
 const AnalyticsConsentContext = createContext<AnalyticsConsentContextValue | null>(null);
 
 export function AnalyticsConsentProvider({ children }: PropsWithChildren) {
+  const enabled = clarityEnabled();
+  const requiresConsent = clarityRequiresConsent();
+
   const [status, setStatus] = useState<ConsentStatus>(() => {
-    if (!clarityEnabled()) {
+    if (!enabled) {
       return "denied";
     }
-    if (!clarityRequiresConsent()) {
+    if (!requiresConsent) {
       return "not_required";
     }
     return "pending";
@@ -38,11 +41,11 @@ export function AnalyticsConsentProvider({ children }: PropsWithChildren) {
     if (typeof window === "undefined") {
       return;
     }
-    if (!clarityEnabled()) {
+    if (!enabled) {
       setStatus("denied");
       return;
     }
-    if (!clarityRequiresConsent()) {
+    if (!requiresConsent) {
       setStatus("not_required");
       return;
     }
@@ -51,10 +54,10 @@ export function AnalyticsConsentProvider({ children }: PropsWithChildren) {
     if (stored === "granted" || stored === "denied") {
       setStatus(stored);
     }
-  }, []);
+  }, [enabled, requiresConsent]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !clarityEnabled()) {
+    if (typeof window === "undefined" || !enabled) {
       return;
     }
 
@@ -79,12 +82,12 @@ export function AnalyticsConsentProvider({ children }: PropsWithChildren) {
       }
       loadClarity(projectId);
     }
-  }, [status]);
+  }, [enabled, status]);
 
   const value = useMemo<AnalyticsConsentContextValue>(
     () => ({
-      enabled: clarityEnabled(),
-      requiresConsent: clarityRequiresConsent(),
+      enabled,
+      requiresConsent,
       status,
       accept: () => {
         setStatus("granted");
@@ -99,17 +102,17 @@ export function AnalyticsConsentProvider({ children }: PropsWithChildren) {
         }
       },
       reset: () => {
-        if (!clarityEnabled()) {
+        if (!enabled) {
           return;
         }
-        const nextStatus = clarityRequiresConsent() ? "pending" : "not_required";
+        const nextStatus = requiresConsent ? "pending" : "not_required";
         setStatus(nextStatus);
         if (typeof window !== "undefined") {
           window.localStorage.removeItem(STORAGE_KEY);
         }
       },
     }),
-    [status],
+    [enabled, requiresConsent, status],
   );
 
   return <AnalyticsConsentContext.Provider value={value}>{children}</AnalyticsConsentContext.Provider>;

@@ -15,7 +15,8 @@ export function clarityEnabled() {
 }
 
 export function clarityRequiresConsent() {
-  return (process.env.EXPO_PUBLIC_CLARITY_REQUIRE_CONSENT ?? "true").toLowerCase() !== "false";
+  const normalized = (process.env.EXPO_PUBLIC_CLARITY_REQUIRE_CONSENT ?? "true").trim().toLowerCase();
+  return normalized !== "false" && normalized !== "0" && normalized !== "no";
 }
 
 export function loadClarity(projectId: string) {
