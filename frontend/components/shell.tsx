@@ -2,6 +2,7 @@ import { Link, usePathname } from "expo-router";
 import { PropsWithChildren, useState } from "react";
 import { Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
+import { useAnalyticsConsent } from "../lib/analytics-consent";
 import { Locale, useI18n } from "../lib/i18n";
 import { colors, elevation, radius, spacing, typography } from "../theme";
 
@@ -23,6 +24,12 @@ export function AppShell({
   const { width } = useWindowDimensions();
   const [menuOpen, setMenuOpen] = useState(false);
   const { locale, setLocale, t } = useI18n();
+  const {
+    enabled: analyticsEnabled,
+    requiresConsent,
+    status: analyticsConsentStatus,
+    reset: resetAnalyticsConsent,
+  } = useAnalyticsConsent();
   const currentSection = pathname === "/" ? "/" : `/${pathname.split("/").filter(Boolean)[0] ?? ""}`;
   const isDesktopHeader = width >= 980;
   const navItems = [
@@ -98,6 +105,18 @@ export function AppShell({
         </View>
       </View>
       <View style={styles.content}>{children}</View>
+      {analyticsEnabled && requiresConsent && analyticsConsentStatus !== "pending" ? (
+        <View style={styles.footerRow}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityHint={t("analyticsPreferencesHint")}
+            onPress={resetAnalyticsConsent}
+            style={({ pressed }) => [styles.footerLink, pressed && styles.footerLinkPressed]}
+          >
+            <Text style={styles.footerLinkText}>{t("analyticsPreferences")}</Text>
+          </Pressable>
+        </View>
+      ) : null}
     </>
   );
 
@@ -454,5 +473,23 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: spacing.md,
+  },
+  footerRow: {
+    marginTop: spacing.sm,
+    alignItems: "flex-end",
+  },
+  footerLink: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
+  },
+  footerLinkPressed: {
+    backgroundColor: colors.surfaceMuted,
+  },
+  footerLinkText: {
+    color: colors.secondary,
+    ...typography.caption,
+    fontWeight: "700",
+    textDecorationLine: "underline",
   },
 });

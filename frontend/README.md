@@ -44,6 +44,27 @@ Default:
 
 In containerized deployments, the frontend Nginx server should proxy `/api` to the backend service.
 
+## Session Analytics
+
+This frontend can optionally enable Microsoft Clarity for session replay and heatmaps.
+
+Relevant env vars:
+
+- `EXPO_PUBLIC_CLARITY_PROJECT_ID`
+- `EXPO_PUBLIC_CLARITY_REQUIRE_CONSENT`
+
+Recommended setup for EU / Italy:
+
+- keep `EXPO_PUBLIC_CLARITY_REQUIRE_CONSENT=true`
+- show the built-in consent prompt before loading Clarity
+- use Clarity only for product UX improvement, not ad profiling
+
+With this setup:
+
+- Clarity stays disabled until the user accepts
+- once accepted, the frontend grants analytics consent to Clarity
+- ad storage remains denied
+
 ## Current screens
 
 - Nearby search

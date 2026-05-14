@@ -108,6 +108,13 @@ const translations = {
     noPricesAvailable: "No Prices Available",
     unknownPlace: "Unknown Place",
     searchFailed: "Search Failed",
+    analyticsConsentTitle: "Help Us Improve PienoSmart",
+    analyticsConsentBody:
+      "Allow privacy-friendly session analytics so we can understand where people click, scroll, and get stuck. We use this only to improve the product experience.",
+    analyticsAccept: "Allow Analytics",
+    analyticsDecline: "Not Now",
+    analyticsPreferences: "Analytics Preferences",
+    analyticsPreferencesHint: "Review or change your analytics consent choice.",
   },
   it: {
     navNearby: "Vicino",
@@ -210,6 +217,13 @@ const translations = {
     noPricesAvailable: "Nessun Prezzo Disponibile",
     unknownPlace: "Luogo Sconosciuto",
     searchFailed: "Ricerca Fallita",
+    analyticsConsentTitle: "Aiutaci a Migliorare PienoSmart",
+    analyticsConsentBody:
+      "Consenti analisi di sessione rispettose della privacy così possiamo capire dove le persone cliccano, scorrono e si bloccano. Le usiamo solo per migliorare l'esperienza del prodotto.",
+    analyticsAccept: "Consenti Analytics",
+    analyticsDecline: "Non Ora",
+    analyticsPreferences: "Preferenze Analytics",
+    analyticsPreferencesHint: "Rivedi o modifica la tua scelta sul consenso analytics.",
   },
 } as const;
 
