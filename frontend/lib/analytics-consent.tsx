@@ -53,7 +53,10 @@ export function AnalyticsConsentProvider({ children }: PropsWithChildren) {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (stored === "granted" || stored === "denied") {
       setStatus(stored);
+      return;
     }
+
+    setStatus("pending");
   }, [enabled, requiresConsent]);
 
   useEffect(() => {
