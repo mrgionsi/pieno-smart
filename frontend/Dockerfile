@@ -18,8 +18,8 @@ RUN npm run build
 # Runtime stage
 FROM nginx:alpine
 
-# Install wget for container health checks
-RUN apk add --no-cache wget
+# Install wget for container health checks and jq for safe JSON generation
+RUN apk add --no-cache wget jq
 
 # Copy built artifacts from builder
 COPY --from=builder /build/dist /usr/share/nginx/html
