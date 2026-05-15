@@ -77,6 +77,8 @@ services:
     environment:
       # API endpoint for frontend
       EXPO_PUBLIC_API_BASE_URL: ${FRONTEND_API_BASE_URL:-/api}
+      EXPO_PUBLIC_CLARITY_PROJECT_ID: ${EXPO_PUBLIC_CLARITY_PROJECT_ID:-}
+      EXPO_PUBLIC_CLARITY_REQUIRE_CONSENT: ${EXPO_PUBLIC_CLARITY_REQUIRE_CONSENT:-true}
 
       # Development user settings (for testing)
       EXPO_PUBLIC_DEV_USER_EMAIL: ${DEV_USER_EMAIL:-demo@pienosmart.local}

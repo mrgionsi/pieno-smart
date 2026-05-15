@@ -57,6 +57,8 @@ curl http://localhost:8000/api/docs # Backend API
 | `DB_PASSWORD` | `postgres` | PostgreSQL database password |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | Allowed CORS origins (comma-separated) |
 | `FRONTEND_API_BASE_URL` | `/api` | Browser-facing API base path for the frontend |
+| `EXPO_PUBLIC_CLARITY_PROJECT_ID` | _(empty)_ | Microsoft Clarity project id for session analytics |
+| `EXPO_PUBLIC_CLARITY_REQUIRE_CONSENT` | `true` | Whether the frontend must wait for user consent before loading Clarity |
 | `DEV_USER_EMAIL` | `demo@pienosmart.local` | Development user email |
 | `DEV_USER_DISPLAY_NAME` | `Demo User` | Development user display name |
 | `DEV_USER_SUBJECT` | `dev-local-user` | Development user subject |
@@ -146,6 +148,7 @@ docker-compose -f docker-compose/docker-compose.preprod.basic.yml ps
 3. **Frontend can't load**
    - Verify `FRONTEND_API_BASE_URL` points to correct backend URL
    - Check backend service is responding: `curl http://localhost:8000/api`
+   - Remember the frontend container writes `/runtime-config.js` from `EXPO_PUBLIC_*` env vars at startup
 
 4. **Port conflicts**
    - Change external ports in docker-compose file if needed

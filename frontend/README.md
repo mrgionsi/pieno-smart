@@ -53,6 +53,12 @@ Relevant env vars:
 - `EXPO_PUBLIC_CLARITY_PROJECT_ID`
 - `EXPO_PUBLIC_CLARITY_REQUIRE_CONSENT`
 
+Important:
+
+- the deployed frontend loads `runtime-config.js` at startup
+- the container entrypoint writes that file from `EXPO_PUBLIC_*` env vars
+- this means the same frontend image can be reused across environments without rebuilding for every frontend config change
+
 Recommended setup for EU / Italy:
 
 - keep `EXPO_PUBLIC_CLARITY_REQUIRE_CONSENT=true`
