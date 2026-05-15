@@ -24,28 +24,25 @@ const STORAGE_KEY = "pienosmart.analytics-consent.v1";
 const AnalyticsConsentContext = createContext<AnalyticsConsentContextValue | null>(null);
 
 export function AnalyticsConsentProvider({ children }: PropsWithChildren) {
-  const enabled = clarityEnabled();
-  const requiresConsent = clarityRequiresConsent();
-
-  const [status, setStatus] = useState<ConsentStatus>(() => {
-    if (!enabled) {
-      return "denied";
-    }
-    if (!requiresConsent) {
-      return "not_required";
-    }
-    return "pending";
-  });
+  const [enabled, setEnabled] = useState(false);
+  const [requiresConsent, setRequiresConsent] = useState(true);
+  const [status, setStatus] = useState<ConsentStatus>("denied");
 
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
-    if (!enabled) {
+    const nextEnabled = clarityEnabled();
+    const nextRequiresConsent = clarityRequiresConsent();
+
+    setEnabled(nextEnabled);
+    setRequiresConsent(nextRequiresConsent);
+
+    if (!nextEnabled) {
       setStatus("denied");
       return;
     }
-    if (!requiresConsent) {
+    if (!nextRequiresConsent) {
       setStatus("not_required");
       return;
     }
@@ -57,7 +54,7 @@ export function AnalyticsConsentProvider({ children }: PropsWithChildren) {
     }
 
     setStatus("pending");
-  }, [enabled, requiresConsent]);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined" || !enabled) {
