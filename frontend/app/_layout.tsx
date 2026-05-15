@@ -1,7 +1,6 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 
-import { AnalyticsConsentBanner } from "../components/analytics-consent-banner";
 import { AnalyticsConsentProvider } from "../lib/analytics-consent";
 import { I18nProvider } from "../lib/i18n";
 
@@ -18,7 +17,6 @@ export default function RootLayout() {
             },
           }}
         />
-        <AnalyticsConsentBanner />
       </AnalyticsConsentProvider>
     </I18nProvider>
   );

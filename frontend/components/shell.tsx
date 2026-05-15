@@ -2,6 +2,7 @@ import { Link, usePathname } from "expo-router";
 import { PropsWithChildren, useState } from "react";
 import { Image, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
+import { AnalyticsConsentBanner } from "../components/analytics-consent-banner";
 import { useAnalyticsConsent } from "../lib/analytics-consent";
 import { Locale, useI18n } from "../lib/i18n";
 import { colors, elevation, radius, spacing, typography } from "../theme";
@@ -105,6 +106,7 @@ export function AppShell({
         </View>
       </View>
       <View style={styles.content}>{children}</View>
+      <AnalyticsConsentBanner />
       {analyticsEnabled && requiresConsent && analyticsConsentStatus !== "pending" ? (
         <View style={styles.footerRow}>
           <Pressable

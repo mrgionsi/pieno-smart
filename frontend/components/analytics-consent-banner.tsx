@@ -32,11 +32,7 @@ export function AnalyticsConsentBanner() {
 
 const styles = StyleSheet.create({
   wrapper: {
-    position: "absolute",
-    left: spacing.lg,
-    right: spacing.lg,
-    bottom: spacing.lg,
-    zIndex: 50,
+    marginTop: spacing.md,
   },
   banner: {
     backgroundColor: colors.surface,
