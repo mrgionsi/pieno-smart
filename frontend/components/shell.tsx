@@ -105,8 +105,8 @@ export function AppShell({
           </Text>
         </View>
       </View>
-      <View style={styles.content}>{children}</View>
       <AnalyticsConsentBanner />
+      <View style={styles.content}>{children}</View>
       {analyticsEnabled && requiresConsent && analyticsConsentStatus !== "pending" ? (
         <View style={styles.footerRow}>
           <Pressable
