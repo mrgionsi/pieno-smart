@@ -18,14 +18,17 @@ RUN npm run build
 # Runtime stage
 FROM nginx:alpine
 
-# Install wget for container health checks
-RUN apk add --no-cache wget
+# Install wget for container health checks and jq for safe JSON generation
+RUN apk add --no-cache wget jq
 
 # Copy built artifacts from builder
 COPY --from=builder /build/dist /usr/share/nginx/html
 
 # Copy nginx configuration for SPA routing
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+
+RUN chmod +x /docker-entrypoint.sh
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
@@ -35,4 +38,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 EXPOSE 80
 
 # Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["/docker-entrypoint.sh"]

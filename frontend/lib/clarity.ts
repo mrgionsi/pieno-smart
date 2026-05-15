@@ -1,3 +1,5 @@
+import { getClarityRuntimeConfig } from "./runtime-config";
+
 declare global {
   interface Window {
     clarity?: (...args: unknown[]) => void;
@@ -7,7 +9,7 @@ declare global {
 const CLARITY_SCRIPT_ID = "pienosmart-clarity";
 
 export function getClarityProjectId() {
-  return process.env.EXPO_PUBLIC_CLARITY_PROJECT_ID?.trim() ?? "";
+  return getClarityRuntimeConfig().projectId;
 }
 
 export function clarityEnabled() {
@@ -15,7 +17,7 @@ export function clarityEnabled() {
 }
 
 export function clarityRequiresConsent() {
-  const normalized = (process.env.EXPO_PUBLIC_CLARITY_REQUIRE_CONSENT ?? "true").trim().toLowerCase();
+  const normalized = getClarityRuntimeConfig().requireConsent.trim().toLowerCase();
   return normalized !== "false" && normalized !== "0" && normalized !== "no";
 }
 

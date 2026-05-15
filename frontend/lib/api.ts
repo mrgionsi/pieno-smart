@@ -5,8 +5,10 @@ import type {
   VehicleProfileListResponse,
 } from "@/lib/types";
 
+import { getApiBaseUrlConfig, getDevUserConfig } from "./runtime-config";
+
 function resolveApiBaseUrl() {
-  const configured = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+  const configured = getApiBaseUrlConfig();
   if (typeof window !== "undefined") {
     const { hostname, protocol } = window.location;
     if (hostname === "localhost" || hostname === "127.0.0.1") {
@@ -30,9 +32,7 @@ function buildHeaders(needsUserContext = false): HeadersInit {
     return {};
   }
 
-  const email = process.env.EXPO_PUBLIC_DEV_USER_EMAIL;
-  const displayName = process.env.EXPO_PUBLIC_DEV_USER_DISPLAY_NAME;
-  const subject = process.env.EXPO_PUBLIC_DEV_USER_SUBJECT;
+  const { email, displayName, subject } = getDevUserConfig();
 
   const headers: Record<string, string> = {};
   if (email) headers["X-Dev-User-Email"] = email;
