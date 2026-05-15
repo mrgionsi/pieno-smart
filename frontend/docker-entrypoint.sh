@@ -15,6 +15,6 @@ jq -n \
     DEV_USER_SUBJECT: $dev_user_subject,
     CLARITY_PROJECT_ID: $clarity_project_id,
     CLARITY_REQUIRE_CONSENT: $clarity_require_consent
-  }' | awk '{print "window.__APP_CONFIG__ = " $0 ";"}' > /usr/share/nginx/html/runtime-config.js
+  }' | jq -c '.' | sed 's/^/window.__APP_CONFIG__ = /; s/$/;/' > /usr/share/nginx/html/runtime-config.js
 
 exec nginx -g "daemon off;"
